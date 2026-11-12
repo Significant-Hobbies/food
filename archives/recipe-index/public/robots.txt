@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://veg-protein-food.significanthobbies.com/sitemap.xml

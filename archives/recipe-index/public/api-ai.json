@@ -1,0 +1,40 @@
+{
+  "name": "Recipe Index",
+  "version": "1",
+  "url": "https://veg-protein-food.significanthobbies.com",
+  "llms": "https://veg-protein-food.significanthobbies.com/llms.txt",
+  "llmsFull": "https://veg-protein-food.significanthobbies.com/llms-full.txt",
+  "sitemap": "https://veg-protein-food.significanthobbies.com/sitemap.xml",
+  "robots": "https://veg-protein-food.significanthobbies.com/robots.txt",
+  "markdown": {
+    "suffix": ".md",
+    "negotiation": false
+  },
+  "surfaces": [
+    {
+      "id": "home",
+      "url": "https://veg-protein-food.significanthobbies.com/",
+      "md": "https://veg-protein-food.significanthobbies.com/index.md",
+      "kind": "static",
+      "description": "Searchable recipe comparison ledger"
+    }
+  ],
+  "dataResources": [
+    {
+      "id": "recipes",
+      "url": "https://veg-protein-food.significanthobbies.com/data/curated-recipes.json",
+      "kind": "json",
+      "description": "Checked source-linked recipe collection"
+    },
+    {
+      "id": "nutrition-reference",
+      "url": "https://veg-protein-food.significanthobbies.com/data/nutrition-reference.json",
+      "kind": "json",
+      "description": "Supporting nutrition reference data"
+    }
+  ],
+  "auth": {
+    "public": true,
+    "notes": "All listed surfaces are public and read-only."
+  }
+}
