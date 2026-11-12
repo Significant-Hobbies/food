@@ -81,6 +81,17 @@ describe("agent-index surfaces", () => {
     expect(html).not.toContain("must not render");
   });
 
+  it("links community source records without calling them verified nutrition evidence", () => {
+    const html = productToHtml({ ...product, sourceRecords: [
+      { sourceUrl: "javascript:alert(1)" },
+      { sourceUrl: "https://world.openfoodfacts.org/product/123" },
+    ] });
+    expect(html).toContain('href="https://world.openfoodfacts.org/product/123"');
+    expect(html).toContain("View source record (does not verify nutrition)");
+    expect(html).not.toContain("javascript:");
+    expect(html).not.toContain("Original source link unavailable");
+  });
+
   it("builds an HTML-only sitemap from the same encoded routes", () => {
     const sitemap = buildSitemapXml(routes);
     expect(sitemap.match(/<url>/g)).toHaveLength(4);

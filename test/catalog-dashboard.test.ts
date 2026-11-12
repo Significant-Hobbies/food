@@ -103,6 +103,13 @@ describe("catalog comparison surface", () => {
     expect(mobile).not.toContain("status-verified");
   });
 
+  it.each(["per_100g", "per_100ml"] as const)("shows the declared %s basis visibly on compact cards", (basis) => {
+    const item = product({ calories: 360, proteinGrams: 52 });
+    item.nutrition.basis = basis;
+    const mobile = renderCatalog(item).split('class="catalog-mobile"')[1];
+    expect(mobile).toContain(`<p class="product-card-basis">Macros per 100 ${basis === "per_100g" ? "g" : "ml"}</p>`);
+  });
+
   it("labels machine nutrition as label-backed without presenting it as human-reviewed", () => {
     const item = product({ calories: 360, proteinGrams: 52 });
     item.nutritionStatus = "machine_verified";

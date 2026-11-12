@@ -156,6 +156,7 @@ tbody tr:hover { background: #fbfcfc; }
   .product-card-metric { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px; margin: 20px 0 16px; font-size: 11px; }
   .product-card-metric strong { font-size: 19px; font-weight: 600; }
   .product-card-metric small { margin-left: auto; color: var(--muted-foreground); font-size: 10px; }
+  .product-card-basis { margin: 0 0 10px; color: var(--muted-foreground); font-size: 11px; }
   .product-card-macros { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; font-variant-numeric: tabular-nums; }
   .product-card-macros small, .product-card-macros strong { display: block; }
   .product-card-macros small { color: var(--muted-foreground); font-size: 10px; margin-bottom: 6px; }

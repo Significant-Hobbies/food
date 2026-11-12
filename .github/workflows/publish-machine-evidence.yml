@@ -54,7 +54,7 @@ jobs:
     env:
       RELEASE_PATH: ${{ inputs.release_path }}
       EXPECTED_MANIFEST_SHA256: ${{ inputs.expected_manifest_sha256 }}
-      LIVE_BASE_URL: https://protein.significanthobbies.com
+      LIVE_BASE_URL: https://food.significanthobbies.com
     steps:
       - uses: actions/checkout@v6
         with:

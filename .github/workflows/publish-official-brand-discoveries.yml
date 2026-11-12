@@ -48,7 +48,7 @@ jobs:
     environment: production
     env:
       RUN_ID: ${{ inputs.upstream_run_id }}
-      LIVE_BASE_URL: https://protein.significanthobbies.com
+      LIVE_BASE_URL: https://food.significanthobbies.com
     steps:
       - name: Initialize durable publication evidence
         shell: bash

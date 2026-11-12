@@ -279,11 +279,18 @@ export function productToHtml(product: Record<string, unknown>, origin = ORIGIN)
   ] as const;
   const basis = nutrition.basis === "per_100g" ? "per 100 g" : nutrition.basis === "per_100ml" ? "per 100 ml" : "basis not recorded";
   const observation = typeof nutrition.observedAt === "string" && Number.isFinite(Date.parse(nutrition.observedAt)) ? nutrition.observedAt.slice(0, 10) : "not recorded";
+  const sourceCandidates = [product.nutritionEvidenceUrl, ...(Array.isArray(product.sourceRecords) ? product.sourceRecords.map((record) => object(record).sourceUrl) : [])];
   let sourceUrl: string | null = null;
-  try {
-    const source = new URL(String(product.nutritionEvidenceUrl ?? ""));
-    if (source.protocol === "https:" && !source.username && !source.password) sourceUrl = source.href;
-  } catch { /* Missing source remains explicit. */ }
+  let sourceLabel = "View nutrition evidence";
+  for (const [index, value] of sourceCandidates.entries()) {
+    try {
+      const source = new URL(String(value ?? ""));
+      if (source.protocol !== "https:" || source.username || source.password) continue;
+      sourceUrl = source.href;
+      if (index > 0) sourceLabel = "View source record (does not verify nutrition)";
+      break;
+    } catch { /* Try the next retained source. */ }
+  }
   const jsonLd = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "Product",
@@ -308,7 +315,7 @@ export function productToHtml(product: Record<string, unknown>, origin = ORIGIN)
 <a class="brand" href="/"><span class="mark" aria-hidden="true">F</span><span>Food</span></a>
 <p class="crumb"><a href="/">Foods</a> / Product record</p><h1>${escapeHtml(identity.name)}</h1>
 <p class="meta">${identity.brand ? `${escapeHtml(identity.brand)} · ` : ""}${identity.gtin ? `GTIN ${escapeHtml(identity.gtin)}` : "Canonical product"}</p>
-<p class="meta">Nutrition ${escapeHtml(basis)} · observed ${escapeHtml(observation)}. ${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noreferrer">View original source</a>` : "Original source link unavailable."}</p>
+<p class="meta">Nutrition ${escapeHtml(basis)} · observed ${escapeHtml(observation)}. ${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(sourceLabel)}</a>` : "Original source link unavailable."}</p>
 <section class="facts" aria-label="Macro comparison">${facts.map(([label, value, unit]) => `<div class="fact"><span>${escapeHtml(label)}</span><strong>${escapeHtml(displayValue(value, unit))}</strong></div>`).join("")}</section>
 <section class="evidence" aria-label="Evidence state"><div class="state"><span>Nutrition evidence</span><strong>${escapeHtml(product.nutritionStatus ?? "missing")}</strong></div><div class="state"><span>Ingredient evidence</span><strong>${escapeHtml(product.ingredientStatus ?? "missing")}</strong></div></section>
 <p class="note">Discovery values remain visibly distinct from Trusted evidence. Missing values are not estimates. <a href="${escapeHtml(identity.path)}.md">Read the Markdown version</a> or <a href="/api/products/${encodeURIComponent(identity.id)}">view JSON</a>.</p>

@@ -6,7 +6,7 @@ The owner-selected Label Desk interface uses the shared UI library. Community nu
 
 ## Current local workflow
 
-Use the exact pinned pnpm version and the managed Fleet workspace for installs and builds. `pnpm check` runs types, unit/Worker tests and build. `python3 test/test_off_parquet.py` checks the Parquet boundary. `pnpm dev --host 127.0.0.1` runs the app with the local D1 binding.
+Use the exact pinned pnpm version and the managed Fleet workspace for installs and builds. `pnpm check` runs types, unit/Worker tests and build. `python3 test/test_off_parquet.py` checks the Parquet boundary. `pnpm dev --host 127.0.0.1` runs the app with the local D1 binding. Open `/operator` on localhost for the retained evidence queue and coverage workbench; public hosts always mount the read-only Food app.
 
 ```sh
 uv run scripts/import-off-parquet.py /path/to/food.parquet /path/to/parquet-output
