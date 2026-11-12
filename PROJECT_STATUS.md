@@ -497,3 +497,11 @@ unfiltered `pagination.total` in 1 read instead of a 19k-row COUNT; filtered
 queries keep the real COUNT. Cold default request is now ~200 rows (was
 ~198k); `pnpm check` green (343 + 65 tests); worker deployed (version
 50fc1977).
+
+## 2026-11-12 — Food revival and unification
+
+Owner requested completion with Open Food Facts, a recipes section, Food naming, Significant-Hobbies ownership and deployment at food.significanthobbies.com. The owner selected the Label Desk redesign using the current shared UI library. Exact was evaluated but not adopted: React component reuse requires an extra renderer bridge, and the fresh export attempt stopped at the retained experiment's disk budget.
+
+The supplied Parquet contains 4,908,827 global records and 26,101 India-tagged rows. The prepared snapshot retains 22,794 source records, with 22,673 canonical products in local SQL. Quality accounting, exact source hashes, explicit exclusions, original observation dates, null/zero and mass/volume boundaries are retained. Two exact source-label mismatch candidates are conflicts, not verified corrections. The quality page records the limited spot-check scope.
+
+The public experience combines catalog search, nutrition comparison and product detail with 50 source-linked vegetarian recipes from 14 publishers. APIs, product HTML/Markdown, source downloads and sitemap retain agent access. Publication remains separate from producer workflows, with production mutations denied. Source, checks and current runtime evidence are tracked in GitHub issue #5.

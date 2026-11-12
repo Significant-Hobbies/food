@@ -37,7 +37,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: protein-index-production-publication
+  group: food-production-publication
   cancel-in-progress: false
 
 jobs:
@@ -270,7 +270,7 @@ jobs:
             --upstream-run-id "$EXTRACTION_RUN_ID" \
             --upstream-head-sha "$EXPECTED_HEAD_SHA" \
             --upstream-head-branch main \
-            --upstream-repository Significant-Hobbies/protein-index \
+            --upstream-repository Significant-Hobbies/food \
             --artifact-name "$ARTIFACT_NAME" \
             --artifact-digest "$ARTIFACT_DIGEST" \
             --artifact-bytes "$ARTIFACT_BYTES"
@@ -292,7 +292,7 @@ jobs:
             echo "Unsupported candidate family: $CANDIDATE_FAMILY" >&2
             exit 1
           fi
-          pnpm exec wrangler d1 execute protein-index --remote --yes --json --command \
+          pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --json --command \
             "SELECT COUNT(*) AS source_records FROM source_records WHERE source_id = '$source_id';
             SELECT COUNT(*) AS open_candidates FROM review_items r JOIN source_records s ON s.id = r.source_record_id
             WHERE s.source_id = '$source_id' AND r.status = 'open'

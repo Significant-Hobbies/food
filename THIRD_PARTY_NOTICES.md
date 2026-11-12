@@ -1,6 +1,6 @@
 # Third-party notices
 
-Protein Index uses external datasets and services whose terms apply
+Food uses external datasets and services whose terms apply
 independently of this repository's source visibility.
 
 ## Open Food Facts
@@ -8,7 +8,7 @@ independently of this repository's source visibility.
 Community product data is sourced from
 [Open Food Facts](https://world.openfoodfacts.org/). Its database is available
 under the [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/);
-individual database contents may also carry separate rights. Protein Index
+individual database contents may also carry separate rights. Food
 keeps this evidence attributed and visibly unverified unless stronger evidence
 is available.
 
@@ -26,4 +26,12 @@ Brand-owner and retailer pages remain source-bound evidence. Their names,
 marks, product images, and page contents belong to their respective owners and
 are not relicensed by this repository.
 
-This notice does not grant a project-wide license for Protein Index.
+Source code is licensed under the repository MIT LICENSE. That license does not relicense the external datasets, recipes, photographs, brands or retailer content.
+
+## Recipes
+
+The curated collection and retained video archive come from the owner’s Recipe Index (`veg-protein-food`) at commit `98014fc5ea4dabe94547f67f6d8d905f4014f0fd`. Recipe titles, serving estimates, ingredient references and publisher links retain their original attribution. The app links to original instructions; publisher content is not relicensed under the source-code MIT license.
+
+## Shared UI library
+
+The interface uses `@saas-maker/ui` 0.1.33 under MIT, including its bundled OFL fonts and upstream notices. See the library package’s THIRD_PARTY_NOTICES.md and font licenses.

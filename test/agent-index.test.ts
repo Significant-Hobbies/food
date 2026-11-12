@@ -39,19 +39,19 @@ const product = {
 
 describe("agent-index surfaces", () => {
   it("llms.txt is agent-readable markdown/text", () => {
-    expect(LLMS_TXT.startsWith("# Protein Index")).toBe(true);
+    expect(LLMS_TXT.startsWith("# Food")).toBe(true);
     expect(LLMS_TXT).toContain("/api/ai");
     expect(LLMS_TXT).not.toContain("<!doctype");
   });
 
   it("index.md describes the product for agents", () => {
-    expect(INDEX_MD.startsWith("# Protein Index")).toBe(true);
+    expect(INDEX_MD.startsWith("# Food")).toBe(true);
     expect(INDEX_MD).toContain("verified label evidence");
   });
 
   it("api/ai catalog matches fleet contract", () => {
-    const cat = buildApiAiCatalog(routes, "https://protein.significanthobbies.com");
-    expect(cat.name).toBe("Protein Index");
+    const cat = buildApiAiCatalog(routes, "https://food.significanthobbies.com");
+    expect(cat.name).toBe("Food");
     expect(cat.llms).toContain("/llms.txt");
     expect(Array.isArray(cat.surfaces)).toBe(true);
     expect(cat.surfaces.some((s) => s.id === "home")).toBe(true);
@@ -72,8 +72,8 @@ describe("agent-index surfaces", () => {
 
   it("renders escaped canonical HTML with matching public facts", () => {
     const html = productToHtml(product);
-    expect(html).toContain('<link rel="canonical" href="https://protein.significanthobbies.com/products/prd%2Fa%26b">');
-    expect(html).toContain('<meta property="og:url" content="https://protein.significanthobbies.com/products/prd%2Fa%26b">');
+    expect(html).toContain('<link rel="canonical" href="https://food.significanthobbies.com/products/prd%2Fa%26b">');
+    expect(html).toContain('<meta property="og:url" content="https://food.significanthobbies.com/products/prd%2Fa%26b">');
     expect(html).toContain("Test &lt;Protein&gt;");
     expect(html).not.toContain("<h1>Test <Protein></h1>");
     expect(html).toContain("52 g");
@@ -81,9 +81,20 @@ describe("agent-index surfaces", () => {
     expect(html).not.toContain("must not render");
   });
 
+  it("links community source records without calling them verified nutrition evidence", () => {
+    const html = productToHtml({ ...product, sourceRecords: [
+      { sourceUrl: "javascript:alert(1)" },
+      { sourceUrl: "https://world.openfoodfacts.org/product/123" },
+    ] });
+    expect(html).toContain('href="https://world.openfoodfacts.org/product/123"');
+    expect(html).toContain("View source record (does not verify nutrition)");
+    expect(html).not.toContain("javascript:");
+    expect(html).not.toContain("Original source link unavailable");
+  });
+
   it("builds an HTML-only sitemap from the same encoded routes", () => {
     const sitemap = buildSitemapXml(routes);
-    expect(sitemap.match(/<url>/g)).toHaveLength(2);
+    expect(sitemap.match(/<url>/g)).toHaveLength(4);
     expect(sitemap).toContain("/products/prd%2Fa%26b");
     expect(sitemap).not.toContain(".md");
     expect(sitemap).not.toContain("/api/");

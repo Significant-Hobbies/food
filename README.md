@@ -1,3 +1,27 @@
+# Food
+
+Food compares packaged foods sold in India using Open Food Facts, alongside 50 source-linked vegetarian recipes. Public home: https://food.significanthobbies.com. Source: https://github.com/Significant-Hobbies/food.
+
+The owner-selected Label Desk interface uses the shared UI library. Community nutrition remains unverified; missing data and conflicts stay visible. See `/sources` and `/api/data-quality` for the exact snapshot and its limits. The surviving repository retains the Protein Index engine and recovery history; Recipe Index is imported under `archives/recipe-index`.
+
+## Current local workflow
+
+Use the exact pinned pnpm version and the managed Fleet workspace for installs and builds. `pnpm check` runs types, unit/Worker tests and build. `python3 test/test_off_parquet.py` checks the Parquet boundary. `pnpm dev --host 127.0.0.1` runs the app with the local D1 binding. Open `/operator` on localhost for the retained evidence queue and coverage workbench; public hosts always mount the read-only Food app.
+
+```sh
+uv run scripts/import-off-parquet.py /path/to/food.parquet /path/to/parquet-output
+pnpm data:stage --input /path/to/parquet-output/india-source.jsonl --format jsonl --mode production --source-updated-at <latest-source-edit> --output /path/to/snapshot
+pnpm db:migrate
+python3 scripts/load-local-snapshot.py /path/to/snapshot/import.sql
+python3 scripts/build-food-snapshot.py /path/to/snapshot /path/to/parquet-output
+```
+
+The supplied file is read-only. Extraction retains a SHA-256 identity, queries the full India country slice with DuckDB, preserves original localized text/nutrients, and creates a separate JSONL input. Staging validates identity, source flags, numeric consistency, dimensional bases and exact label mismatch candidates. The public source download is ODbL; the code MIT license does not relicense external recipe or image content.
+
+After checks and review, `pnpm data:publish --input /path/to/snapshot --remote --confirm-remote` uses the explicit Food config and separate publication gate. `pnpm build` generates `dist/food/wrangler.json`; deploy that generated config with an exact source tag. Existing evidence workflows remain distinct from deployment. Historical documentation below describes the inherited engine and does not override this current product scope.
+
+---
+
 # Protein Index
 
 Live dashboard: <https://protein.significanthobbies.com>

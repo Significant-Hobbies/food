@@ -1,0 +1,18 @@
+[
+  {
+    "sourceRecordId": "0075779311145",
+    "sourceContentHash": "f4a7868df9f30c61757210dc9747fe3ef6b96e131993d1b7d2e78ba4e8f91a6e",
+    "labelUrl": "https://images.openfoodfacts.org/images/products/007/577/931/1145/nutrition_en.23.400.jpg",
+    "reviewedAt": "2026-11-12",
+    "status": "visual_review_candidate_conflict",
+    "reason": "Source nutrition image states 30 kcal, 0 g fat and 0 g protein per 8 g serving; structured record states 535.7 kcal, 28.6 g fat and 7.1 g protein per 100 g. Values do not reconcile with that image."
+  },
+  {
+    "sourceRecordId": "0748927026245",
+    "sourceContentHash": "5e7a8d60ca60775011feb2b0f49072d74c15b16d714c70c90ca4aa2e61c2ee75",
+    "labelUrl": "https://images.openfoodfacts.org/images/products/074/892/702/6245/nutrition_pt.16.400.jpg",
+    "reviewedAt": "2026-11-12",
+    "status": "visual_review_candidate_conflict",
+    "reason": "Source nutrition image states 120 kcal and 1.5 g fat per 32 g serving (375 kcal and about 4.7 g fat per 100 g); structured record states 406.25 kcal and 6.25 g fat per 100 g. Protein agrees but calories and fat do not."
+  }
+]

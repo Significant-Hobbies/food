@@ -41,7 +41,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: protein-index-production-publication
+  group: food-production-publication
   cancel-in-progress: false
 
 jobs:
@@ -135,7 +135,7 @@ jobs:
       - name: Apply pending D1 migrations atomically
         run: |
           set -euo pipefail
-          pnpm exec wrangler d1 execute protein-index --remote --yes --json --command "SELECT name FROM d1_migrations ORDER BY id;" > .data/guarded-release/applied-migrations.json
+          pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --json --command "SELECT name FROM d1_migrations ORDER BY id;" > .data/guarded-release/applied-migrations.json
           mkdir -p .data/guarded-release/migrations
           for migration in migrations/*.sql; do
             name="$(basename "$migration")"
@@ -145,15 +145,15 @@ jobs:
             import_file=".data/guarded-release/migrations/$name"
             cp "$migration" "$import_file"
             printf "\nINSERT INTO d1_migrations (name) VALUES ('%s');\n" "$name" >> "$import_file"
-            pnpm exec wrangler d1 execute protein-index --remote --yes --file "$import_file"
+            pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --file "$import_file"
           done
       - name: Read exact live states and derive final states
         run: |
           set -euo pipefail
           pnpm data:guarded-release:state-query -- --family nutrition --output .data/guarded-release/nutrition-query.sql
           pnpm data:guarded-release:state-query -- --family ingredients --output .data/guarded-release/ingredients-query.sql
-          pnpm exec wrangler d1 execute protein-index --remote --yes --json --command "$(< .data/guarded-release/nutrition-query.sql)" > .data/guarded-release/before-nutrition.json
-          pnpm exec wrangler d1 execute protein-index --remote --yes --json --command "$(< .data/guarded-release/ingredients-query.sql)" > .data/guarded-release/before-ingredients.json
+          pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --json --command "$(< .data/guarded-release/nutrition-query.sql)" > .data/guarded-release/before-nutrition.json
+          pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --json --command "$(< .data/guarded-release/ingredients-query.sql)" > .data/guarded-release/before-ingredients.json
           cp .data/guarded-release/before-nutrition.json .data/guarded-release/after-nutrition.json
           cp .data/guarded-release/before-ingredients.json .data/guarded-release/after-ingredients.json
           node --input-type=module <<'NODE'
@@ -170,13 +170,13 @@ jobs:
           workflow_name="Extract label evidence with Robotoff"; artifact_name="robotoff-label-candidates-$RUN_ID"
           if [[ "$FAMILY" == ingredients ]]; then workflow_name="Extract ingredient label evidence"; artifact_name="robotoff-ingredient-candidates-$RUN_ID"; fi
           bytes="$(stat --format=%s .data-reviewed.zip)"
-          pnpm data:guarded-release:prepare -- --artifact .data/guarded-release/artifact --bundle "$BUNDLE" --family "$FAMILY" --before-nutrition .data/guarded-release/before-nutrition.json --before-ingredients .data/guarded-release/before-ingredients.json --after-nutrition .data/guarded-release/after-nutrition.json --after-ingredients .data/guarded-release/after-ingredients.json --expected-count "$DECISIONS" --expected-verify-count "$VERIFIES" --scratch .data/guarded-release/sql --output .data/guarded-release/guarded.sql --workflow-name "$workflow_name" --upstream-run-id "$RUN_ID" --upstream-head-sha "$HEAD_SHA" --upstream-head-branch main --upstream-repository Significant-Hobbies/protein-index --artifact-name "$artifact_name" --artifact-digest "$ARTIFACT_DIGEST" --artifact-bytes "$bytes"
-          pnpm exec wrangler d1 execute protein-index --remote --yes --file .data/guarded-release/guarded.sql
+          pnpm data:guarded-release:prepare -- --artifact .data/guarded-release/artifact --bundle "$BUNDLE" --family "$FAMILY" --before-nutrition .data/guarded-release/before-nutrition.json --before-ingredients .data/guarded-release/before-ingredients.json --after-nutrition .data/guarded-release/after-nutrition.json --after-ingredients .data/guarded-release/after-ingredients.json --expected-count "$DECISIONS" --expected-verify-count "$VERIFIES" --scratch .data/guarded-release/sql --output .data/guarded-release/guarded.sql --workflow-name "$workflow_name" --upstream-run-id "$RUN_ID" --upstream-head-sha "$HEAD_SHA" --upstream-head-branch main --upstream-repository Significant-Hobbies/food --artifact-name "$artifact_name" --artifact-digest "$ARTIFACT_DIGEST" --artifact-bytes "$bytes"
+          pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --file .data/guarded-release/guarded.sql
       - name: Prove exact live postconditions
         run: |
           set -euo pipefail
-          pnpm exec wrangler d1 execute protein-index --remote --yes --json --command "$(< .data/guarded-release/nutrition-query.sql)" > .data/guarded-release/actual-nutrition.json
-          pnpm exec wrangler d1 execute protein-index --remote --yes --json --command "$(< .data/guarded-release/ingredients-query.sql)" > .data/guarded-release/actual-ingredients.json
+          pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --json --command "$(< .data/guarded-release/nutrition-query.sql)" > .data/guarded-release/actual-nutrition.json
+          pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --json --command "$(< .data/guarded-release/ingredients-query.sql)" > .data/guarded-release/actual-ingredients.json
           node --input-type=module <<'NODE'
           import { readFile } from 'node:fs/promises';
           for (const family of ['nutrition', 'ingredients']) {

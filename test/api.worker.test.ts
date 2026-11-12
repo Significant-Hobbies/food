@@ -2429,7 +2429,7 @@ describe("Worker catalog API", () => {
     expect(sitemapResponse.status).toBe(200);
     expect(sitemapResponse.headers.get("content-type")).toContain("application/xml");
     const sitemap = await sitemapResponse.text();
-    expect(sitemap.match(/<url>/g)).toHaveLength(activeProducts.results.length + 1);
+    expect(sitemap.match(/<url>/g)).toHaveLength(activeProducts.results.length + 3);
     expect(sitemap).toContain(`http://localhost/products/${encodedId}`);
     expect(sitemap).not.toContain(".md");
     expect(sitemap).not.toContain("/api/");

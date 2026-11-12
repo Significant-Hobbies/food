@@ -1,0 +1,20 @@
+[
+  {
+    "code": "0075779311145",
+    "sourceUrl": "https://images.openfoodfacts.org/images/products/007/577/931/1145/nutrition_en.23.400.jpg",
+    "result": "mismatch",
+    "note": "Source nutrition image states 30 kcal, 0 g fat and 0 g protein per 8 g serving; structured record states 535.7 kcal, 28.6 g fat and 7.1 g protein per 100 g. Values do not reconcile with that image."
+  },
+  {
+    "code": "0748927026245",
+    "sourceUrl": "https://images.openfoodfacts.org/images/products/074/892/702/6245/nutrition_pt.16.400.jpg",
+    "result": "mismatch",
+    "note": "Source nutrition image states 120 kcal and 1.5 g fat per 32 g serving (375 kcal and about 4.7 g fat per 100 g); structured record states 406.25 kcal and 6.25 g fat per 100 g. Protein agrees but calories and fat do not."
+  },
+  {
+    "code": "0690225106542",
+    "sourceUrl": "https://images.openfoodfacts.org/images/products/069/022/510/6542/nutrition_en.14.400.jpg",
+    "result": "macros_match",
+    "note": "Five displayed macros agree with the per-100-g nutrition image. Its separate front image is mismatched and suppressed in the app."
+  }
+]

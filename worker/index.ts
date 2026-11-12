@@ -21,6 +21,8 @@ import { getCoverage } from "./coverage";
 import { verifyProductIdentity } from "./identity-evidence";
 import { listReviews, resolveReview } from "./reviews";
 import { observeRequest } from "./telemetry";
+import foodQuality from "../data/food-quality.json";
+import { defaultRecipeFilters, filterRecipes, ingredientExclusions, proteinSources, recipeCollectedAt, recipes } from "../shared/recipes";
 import {
   listTerminalEvidence,
   recordTerminalEvidence,
@@ -102,7 +104,24 @@ app.get("/api/health", async (c) => {
     latestPublishedAt: run?.completed_at ?? null,
     sourceComplete: run?.source_complete === undefined || run.source_complete === null ? null : run.source_complete === 1,
     mutations: "local_only",
+    version: c.env.CF_VERSION_METADATA?.tag ?? null,
+    sourceSnapshot: foodQuality.sourceSha256,
   });
+});
+
+app.get("/api/data-quality", (c) => c.json(foodQuality));
+app.get("/api/recipes", (c) => {
+  const query = new URL(c.req.url).searchParams;
+  const filters = { ...defaultRecipeFilters, query: query.get("q") ?? "", dietary: query.get("dietary") ?? "all", format: query.get("format") ?? "all", proteinSource: query.get("proteinSource") ?? "all", indiaFit: query.get("indiaFit") ?? "all", sort: query.get("sort") ?? "curated", excludedIngredients: query.getAll("exclude") };
+  if (!["all", "vegan", "vegetarian"].includes(filters.dietary)
+    || !["all", ...recipes.map((recipe) => recipe.format)].includes(filters.format)
+    || !["all", ...Object.keys(proteinSources)].includes(filters.proteinSource)
+    || !["all", "easy", "adaptable", "specialty"].includes(filters.indiaFit)
+    || !["curated", "protein-density", "protein", "calories", "title"].includes(filters.sort)
+    || filters.excludedIngredients.some((value) => !Object.hasOwn(ingredientExclusions, value))) return c.json(errorBody("validation_error", "Invalid recipe filter"), 400);
+  if (filters.query.length > 200 || filters.excludedIngredients.length > 10) return c.json(errorBody("validation_error", "Recipe query is too long"), 400);
+  const found = filterRecipes(recipes, filters);
+  return c.json({ recipes: found, total: found.length, collectionTotal: recipes.length, collectedAt: recipeCollectedAt, nutritionAuthority: "publisher_stated_estimate", nutritionBasis: "per_stated_recipe_serving" });
 });
 
 app.get("/api/products", async (c) => {
@@ -362,7 +381,7 @@ app.onError((error, c) => {
 // catalog queries on every hit. Reads carry no auth, so the public corpus is
 // safe to share; mutations are local-only and never reach this path.
 const EDGE_CACHEABLE_PATH =
-  /^\/(api\/(products|ai|coverage)(\/|$)|products\/|sitemap\.xml|llms(-full)?\.txt|index\.md)/;
+  /^\/(api\/(products|ai|coverage|recipes|data-quality)(\/|$)|products\/|sitemap\.xml|llms(-full)?\.txt|index\.md)/;
 
 export default {
   async fetch(request, env, ctx) {

@@ -34,7 +34,7 @@ export function observeRequest(
   ctx: ExecutionContext,
   edgeCache: "hit" | "miss" | "bypass",
 ): void {
-  const key = typeof env.APP_HEALTH_INGEST_KEY === "string" ? env.APP_HEALTH_INGEST_KEY.trim() : "";
+  const key = "APP_HEALTH_INGEST_KEY" in env && typeof env.APP_HEALTH_INGEST_KEY === "string" ? env.APP_HEALTH_INGEST_KEY.trim() : "";
   const route = routeFor(new URL(request.url).pathname);
   if (!key || !route) return;
   try {

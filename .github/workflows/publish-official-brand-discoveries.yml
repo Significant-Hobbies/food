@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: protein-index-production-publication
+  group: food-production-publication
   cancel-in-progress: false
 
 jobs:
@@ -48,7 +48,7 @@ jobs:
     environment: production
     env:
       RUN_ID: ${{ inputs.upstream_run_id }}
-      LIVE_BASE_URL: https://protein.significanthobbies.com
+      LIVE_BASE_URL: https://food.significanthobbies.com
     steps:
       - name: Initialize durable publication evidence
         shell: bash
@@ -155,7 +155,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          pnpm exec wrangler d1 migrations list protein-index --remote | tee "$PUBLICATION_EVIDENCE_DIR/migrations.txt"
+          pnpm exec wrangler --config wrangler.food.jsonc d1 migrations list food --remote | tee "$PUBLICATION_EVIDENCE_DIR/migrations.txt"
           if grep -q "Migrations to be applied" "$PUBLICATION_EVIDENCE_DIR/migrations.txt"; then
             echo "::error::Official-brand publication refuses pending migrations."
             exit 1
@@ -170,9 +170,9 @@ jobs:
           set -euo pipefail
           source_sql="$(jq -r '[.sources[].source | @json] | join(",")' .data/official-brand/publication/manifest.json)"
           query="SELECT COUNT(*) AS active_products FROM products WHERE is_active = 1; SELECT COUNT(*) AS source_records FROM source_records WHERE source_id IN ($source_sql); SELECT COUNT(*) AS offers FROM offers WHERE retailer IN ($source_sql);"
-          pnpm exec wrangler d1 execute protein-index --remote --yes --json --command "$query" > "$PUBLICATION_EVIDENCE_DIR/pre-state.json"
-          pnpm exec wrangler d1 execute protein-index --remote --yes --file .data/official-brand/import.sql 2>&1 | tee "$PUBLICATION_EVIDENCE_DIR/publication.log"
-          pnpm exec wrangler d1 execute protein-index --remote --yes --json --command "$query" > "$PUBLICATION_EVIDENCE_DIR/post-state.json"
+          pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --json --command "$query" > "$PUBLICATION_EVIDENCE_DIR/pre-state.json"
+          pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --file .data/official-brand/import.sql 2>&1 | tee "$PUBLICATION_EVIDENCE_DIR/publication.log"
+          pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --json --command "$query" > "$PUBLICATION_EVIDENCE_DIR/post-state.json"
           node --input-type=module <<'NODE'
           import { readFile } from 'node:fs/promises';
           const [before, after, manifest] = await Promise.all(['pre-state.json', 'post-state.json'].map(async (name) => JSON.parse(await readFile(`${process.env.PUBLICATION_EVIDENCE_DIR}/${name}`, 'utf8'))).concat(readFile('.data/official-brand/publication/manifest.json', 'utf8').then(JSON.parse)));

@@ -1,0 +1,35 @@
+# Recipe Index — full agent brief
+
+Recipe Index is a static, source-linked comparison tool for 50 egg-free
+vegetarian recipes. Admission requires at least 10 g protein per publisher
+serving and at least 10 g protein per 100 calories calculated from protein and
+calorie values published for that same serving.
+
+## Audience and outcome
+
+It is for vegetarian cooks in India who want realistic higher-protein food
+ideas without abandoning familiar meals or ingredients. The useful outcome is
+a shortlist of recipes whose nutrition basis, key ingredients, India fit, and
+original source can be inspected before cooking.
+
+## Collection shape
+
+- 45 foods and five drinks.
+- 14 credited publishers.
+- Egg-free vegetarian; vegan recipes remain filterable.
+- Soy, tofu, TVP, tempeh, seitan, dairy, legumes, whey, and vegan protein
+  powder are all valid strategies when the evidence clears both gates.
+
+## Evidence rules
+
+Nutrition remains publisher-supplied and tied to the stated serving. Recipe
+Index does not infer absent quantities, recalculate an ingredient list, or
+promise that substitutions preserve the macros. It is not medical advice.
+
+## Machine surfaces
+
+- Home: https://veg-protein-food.significanthobbies.com/
+- Markdown: https://veg-protein-food.significanthobbies.com/index.md
+- Agent catalog: https://veg-protein-food.significanthobbies.com/api-ai.json
+- Checked recipe data: https://veg-protein-food.significanthobbies.com/data/curated-recipes.json
+- Sitemap: https://veg-protein-food.significanthobbies.com/sitemap.xml

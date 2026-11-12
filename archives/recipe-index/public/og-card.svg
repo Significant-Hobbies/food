@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
+  <title id="title">Recipe Index</title>
+  <desc id="description">Protein worth the calories. A source-linked vegetarian recipe ledger.</desc>
+  <rect width="1200" height="630" fill="#eef3ff"/>
+  <rect x="52" y="50" width="1096" height="530" fill="#ffffff" stroke="#102a72" stroke-width="3"/>
+  <rect x="52" y="50" width="1096" height="74" fill="#102a72"/>
+  <rect x="80" y="70" width="36" height="36" fill="#d7ff4f"/>
+  <text x="98" y="95" fill="#102a72" font-family="Arial, sans-serif" font-size="18" font-weight="800" text-anchor="middle">RI</text>
+  <text x="138" y="96" fill="#ffffff" font-family="Arial, sans-serif" font-size="22" font-weight="800" letter-spacing="2">RECIPE INDEX</text>
+  <text x="84" y="235" fill="#102a72" font-family="Arial, sans-serif" font-size="76" font-weight="900" letter-spacing="-4">Protein worth</text>
+  <text x="84" y="316" fill="#102a72" font-family="Arial, sans-serif" font-size="76" font-weight="900" letter-spacing="-4">the calories.</text>
+  <text x="86" y="378" fill="#17213f" font-family="Arial, sans-serif" font-size="25">50 egg-free vegetarian recipes · direct original sources</text>
+  <line x1="84" y1="424" x2="1114" y2="424" stroke="#b7c5ed" stroke-width="2"/>
+  <rect x="84" y="454" width="250" height="76" fill="#102a72"/>
+  <text x="108" y="486" fill="#ffffff" font-family="Arial, sans-serif" font-size="17" font-weight="700">ADMISSION RULE</text>
+  <text x="108" y="516" fill="#d7ff4f" font-family="Arial, sans-serif" font-size="29" font-weight="900">10 g + 10 g / 100 kcal</text>
+  <text x="374" y="482" fill="#61709c" font-family="Arial, sans-serif" font-size="18">Publisher-supplied serving macros</text>
+  <text x="374" y="514" fill="#17213f" font-family="Arial, sans-serif" font-size="22" font-weight="700">Ingredients, India fit, protein source, and evidence.</text>
+</svg>

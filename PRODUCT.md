@@ -1,51 +1,13 @@
-# Product
+# Food
 
-<!-- impeccable:product-schema 1 -->
+Food helps Indian shoppers compare packaged-food nutrition and discover practical vegetarian recipes, with the source and nutrition basis visible.
 
-## Platform
+The public product combines the retained Protein Index catalog engine and Recipe Index collection. Its canonical repository is Significant-Hobbies/food and its public domain is food.significanthobbies.com. The stable owner-local catalog identity remains protein-index.
 
-web
+The catalog uses an attributed India-tagged Open Food Facts snapshot in D1 SQL. Community data stays unverified. Missing values stay null, explicit zero stays zero, mass and volume stay separate, and numeric/source conflicts do not receive protein-density rankings. Exact source-hash-bound visual mismatch candidates are negative flags, never automatic verification.
 
-## Users
+The Recipes section contains 50 egg-free vegetarian recipes from 14 publishers. Keep publisher attribution, serving basis, source notes and original links. The historical video archive is separate and never counted as the curated collection.
 
-Indian shoppers comparing protein foods and operators reviewing canonical product evidence.
+Public reads are available through the website, JSON APIs, product HTML and Markdown. Operator mutations remain local-only. Producer jobs and reviewed publication remain separate. No paid data-feed completeness, present retail availability, current-label authority or medical outcomes are claimed.
 
-## Product Purpose
-
-Protein Index turns fragmented label, brand, and catalog data into comparable canonical products. Success means shoppers can compare protein and five core macros without confusing Discovery evidence with Trusted evidence.
-
-## Positioning
-
-The product joins GTIN-oriented identity, source-aware evidence states, and protein-per-calorie comparison while preserving field provenance and refusing to invent missing nutrition.
-
-## Operating Context
-
-The public experience is a read-only catalog and product-detail dashboard. Separate producer and explicitly dispatched publication workflows maintain D1; the serving Worker never promotes model output or accesses private retained label artifacts for public rendering.
-
-## Capabilities and Constraints
-
-- Canonical active products, macro comparison, search, coverage, and evidence-state labels.
-- Trusted and Discovery are distinct; machine verification is never presented as human verification.
-- Mass and volume remain dimensionally separate.
-- Public product pages remain macro-first and exclude review mutations, private R2 artifacts, provenance drill-down, and unsupported market-coverage claims.
-- Deployment and data publication are manual and separate from source changes.
-
-## Brand Commitments
-
-Keep the Protein Index name, restrained evidence-first voice, existing PI mark, and current green/paper visual language.
-
-## Evidence on Hand
-
-The canonical evidence model, tests, source policies, and current dashboard live in `shared/`, `worker/`, `test/`, `docs/product/evidence-policy.md`, and `src/`. No testimonials, commercial claims, or complete-market proof exist and none may be fabricated.
-
-## Product Principles
-
-- Evidence before completeness claims.
-- Show missing data honestly.
-- Keep comparison fast and macro-first.
-- Separate producer, publication, and serving boundaries.
-- Prefer deterministic public routes and source-derived inventories.
-
-## Accessibility & Inclusion
-
-Public surfaces must remain keyboard navigable, semantic, responsive from 320px upward, and legible with visible focus treatment and WCAG AA text contrast.
+The owner selected Label Desk on 12 November 2026. Reuse the current shared UI library. Success means search, comparison, detail, recipe filters and source inspection work on phone, tablet and desktop, with an explicit quality report and deployed runtime evidence.

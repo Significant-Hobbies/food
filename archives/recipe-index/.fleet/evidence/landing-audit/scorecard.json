@@ -1,0 +1,51 @@
+{
+  "$schema": "fleet.landing-audit.v1",
+  "project": "veg-protein-food",
+  "priority": "P4",
+  "decision": "Hold",
+  "auditedAt": "2026-08-29",
+  "candidateUrl": "https://goat-administrator-joan-feat.trycloudflare.com/",
+  "productionUrl": "https://veg-protein-food.significanthobbies.com/",
+  "releaseState": "Latest-source candidate qualified through a temporary Cloudflare tunnel. Metadata, machine-readable surfaces, the /api/ai Pages rewrite, dual footer composition, and preview-safe analytics guard are not deployed by this audit.",
+  "implementationAction": "preserve",
+  "migrationCandidate": false,
+  "gates": {
+    "contentPurpose": {
+      "score": 100,
+      "status": "pass",
+      "evidence": "The first viewport identifies a curated egg-free vegetarian recipe ledger, quantifies its 50-recipe scope, explains both admission gates, names the supported protein strategies, and leads directly into search, exclusions, filters, nutrition comparison, and original publisher links. The page clearly labels publisher-supplied macros, serving-basis limits, substitution risk, and its non-medical role."
+    },
+    "designQuality": {
+      "score": 95,
+      "status": "pass",
+      "evidence": "The existing Swiss food-lab ledger is distinctive, highly legible, and appropriate to a source-linked comparison tool. It avoids generic marketing cards and makes nutrition, India fit, recipe format, and source actions scannable across 50 records. Exact 390 and 1440 pixel checks found zero overflow; the latest build renders all 50 rows, one project strip, and one Ask AI footer without console or resource failures. A generic template migration would reduce product specificity."
+    },
+    "seo": {
+      "score": 100,
+      "status": "pass",
+      "evidence": "The latest candidate passes all 15 checks with no warnings: concise title and description, exact canonical, complete Open Graph and Twitter metadata, product-specific social artwork, valid CollectionPage and ItemList JSON-LD, clean H1/H2 hierarchy, approximately 427 server-rendered words, and no broken internal links."
+    },
+    "geo": {
+      "score": 96,
+      "status": "pass-with-release-advisory",
+      "evidence": "Source now includes truthful llms.txt and llms-full.txt briefs, homepage Markdown, robots policy, a three-page sitemap, a valid API-AI catalog, and checked recipe data resources. The Pages rewrite exposes /api/ai from api-ai.json on the canonical deployment. The temporary-host auditor reports foreign-canonical and missing-rewrite advisories because Astro Preview does not emulate Cloudflare Pages _redirects; the canonical-host source shape is designed for S-tier after an authorized release."
+    },
+    "performance": {
+      "score": 91,
+      "status": "pass-with-advisory",
+      "evidence": "PSI Swarm completed 4/4 candidate profiles with weighted LCP 1.11 s, CLS 0, and TBT 3 ms. LCP was 4.40 s on the slowest mobile profile, 866 ms on mid mobile, 1.58 s on fast mobile, and 314 ms on desktop. No Lighthouse opportunity was reported; the isolated slow-profile variance remains the only performance advisory."
+    }
+  },
+  "verification": {
+    "passed": [
+      "17/17 repository tests",
+      "recipe data contract check",
+      "Astro production build",
+      "latest-candidate browser checks at 390 and 1440 pixels",
+      "latest-candidate SEO audit",
+      "latest-candidate PSI Swarm coverage profile",
+      "direct 200 checks for Markdown, llms, API-AI JSON, sitemap, and robots resources"
+    ]
+  },
+  "minimumObserved": 91
+}

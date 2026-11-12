@@ -1,0 +1,26 @@
+# Recipe Index
+
+> A curated, source-linked ledger of 50 egg-free vegetarian recipes that each
+> clear explicit protein-per-serving and protein-per-calorie gates.
+
+## Use this when
+
+- Looking for practical high-protein vegetarian food ideas.
+- Comparing source-published calories and protein on the same serving basis.
+- Filtering recipes by ingredients, protein source, or practicality in India.
+- Finding the credited original publisher before relying on a recipe.
+
+## Product surfaces
+
+- [Recipe ledger](https://veg-protein-food.significanthobbies.com/)
+- [Markdown product brief](https://veg-protein-food.significanthobbies.com/index.md)
+- [Full agent brief](https://veg-protein-food.significanthobbies.com/llms-full.txt)
+- [Recipe data](https://veg-protein-food.significanthobbies.com/data/curated-recipes.json)
+- [Agent catalog](https://veg-protein-food.significanthobbies.com/api-ai.json)
+
+## Limits
+
+- Publisher nutrition is a comparison aid, not medical advice.
+- Missing quantities are not invented or recalculated.
+- Substitutions can change the published nutrition.
+- The collection is curated, not an exhaustive recipe database.

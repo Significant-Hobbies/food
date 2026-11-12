@@ -1,3 +1,3 @@
-# Protein Index
+# Food
 
 Searchable protein index.

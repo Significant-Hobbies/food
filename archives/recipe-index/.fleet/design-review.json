@@ -1,0 +1,76 @@
+{
+  "$schema": "fleet.design-review.v1",
+  "version": 1,
+  "project": "recipe-dashboard",
+  "target": "Recipe Index — Epic Mint Leaves creator page",
+  "mode": "overhaul",
+  "register": "product",
+  "context": {
+    "product": "PRODUCT.md",
+    "design": "DESIGN.md"
+  },
+  "direction": {
+    "references": [
+      "Swiss International Typographic Style",
+      "FDA Nutrition Facts information hierarchy",
+      "Scientific research ledgers"
+    ],
+    "probes": [
+      {
+        "id": "direction-a-swiss-food-lab",
+        "path": "artifacts/design/direction-board.png"
+      },
+      {
+        "id": "direction-b-market-board",
+        "path": "artifacts/design/direction-board.png"
+      },
+      {
+        "id": "direction-c-clean-nutrition-index",
+        "path": "artifacts/design/direction-board.png"
+      }
+    ],
+    "selected": "direction-a-swiss-food-lab",
+    "approval": "delegated",
+    "before": ""
+  },
+  "evidence": {
+    "screenshots": [
+      {
+        "width": 390,
+        "path": "artifacts/design/after-390.png"
+      },
+      {
+        "width": 768,
+        "path": "artifacts/design/after-768.png"
+      },
+      {
+        "width": 1440,
+        "path": "artifacts/design/after-1440.png"
+      }
+    ],
+    "projectCheck": {
+      "command": "npm run check",
+      "status": "pass"
+    },
+    "critique": {
+      "score": 35,
+      "maximum": 40
+    },
+    "audit": {
+      "score": 19,
+      "maximum": 20
+    },
+    "unresolved": {
+      "p0": 0,
+      "p1": 0
+    },
+    "detector": {
+      "posture": "advisory",
+      "findings": []
+    }
+  },
+  "ownerFeedback": {
+    "decision": "delegated",
+    "note": "Owner said ‘go’ after reviewing the three-direction board; implementation judgment was explicitly delegated."
+  }
+}

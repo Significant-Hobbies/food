@@ -1,0 +1,259 @@
+---
+import '../../styles.css';
+---
+<!--
+THESIS: A crisp Swiss food-lab ledger for fast, honest recipe comparison.
+OWN-WORLD: Cool daylight canvas, cobalt rules, white paper rows, acid-lime actions, and compact tabular numerals.
+STORY: See the admission standard, narrow the collection, compare source-published nutrition, inspect ingredients, then open the original.
+FIRST VIEWPORT: Product identity, 10+10 admission rule, food/drink balance, controls, column key, and first food rows.
+FORM: The existing Swiss research-ledger direction, adapted for a multi-publisher vegetarian collection.
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Find egg-free vegetarian recipes with at least 10 g protein and 10 g protein per 100 calories, with source links and India-friendly ingredient notes.">
+    <link rel="canonical" href="https://veg-protein-food.significanthobbies.com/">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://veg-protein-food.significanthobbies.com/">
+    <meta property="og:title" content="Protein-Dense Vegetarian Recipes — Recipe Index">
+    <meta property="og:description" content="Compare 50 source-linked egg-free vegetarian recipes that clear two explicit protein gates, with ingredient filters and India-fit notes.">
+    <meta property="og:image" content="https://veg-protein-food.significanthobbies.com/og-card.svg">
+    <meta property="og:image:alt" content="Recipe Index: protein worth the calories">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Protein-Dense Vegetarian Recipes — Recipe Index">
+    <meta name="twitter:description" content="A source-linked ledger of 50 egg-free vegetarian recipes with explicit protein gates and India-fit notes.">
+    <meta name="twitter:image" content="https://veg-protein-food.significanthobbies.com/og-card.svg">
+    <script type="application/ld+json" set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: 'Recipe Index',
+      url: 'https://veg-protein-food.significanthobbies.com/',
+      description: 'A source-linked comparison of 50 egg-free vegetarian recipes that each publish at least 10 g protein per serving and 10 g protein per 100 calories.',
+      isAccessibleForFree: true,
+      mainEntity: {
+        '@type': 'ItemList',
+        name: 'Protein-dense vegetarian recipe collection',
+        numberOfItems: 50,
+      },
+    })}></script>
+    <title>Protein-Dense Vegetarian Recipes — Recipe Index</title>
+    <script is:inline>
+      !function(t,e){if(t.location.hostname!=="veg-protein-food.significanthobbies.com")return;var o,n,a,r;function s(e){(o=t._phq=t._phq||[]).push([].slice.call(e))}o=t.posthog=function(e,n){s([e,n])},o.__loaded||(a=e.createElement("script"),a.type="text/javascript",a.async=!0,a.crossOrigin="anonymous",a.src="https://us.i.posthog.com/array.js",r=e.getElementsByTagName("script")[0],r.parentNode.insertBefore(a,r),o.__loaded=!0),t.posthog.init("phc_qgiAarw4Co4pw9fz3Fxj4UJaHmqzFetqs4JrXhGc35Nd",{api_host:"https://us.i.posthog.com",person_profiles:"always",capture_pageview:!1,autocapture:!1,loaded:function(){t.posthog.capture("page_view",{project_id:"veg-protein-food"})}})}(window,document);
+    </script>
+    <script is:inline>
+      (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+      })(window,document,"clarity","script","y6bvcb5mwv");
+      window.clarity("set", "project_id", "veg-protein-food");
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#recipe-ledger">Skip to recipe ledger</a>
+
+    <header class="site-header">
+      <div class="masthead">
+        <div class="masthead__brand">
+          <span class="brand-mark" aria-hidden="true">RI</span>
+          <div>
+            <p class="eyebrow">Independent recipe research</p>
+            <p class="wordmark">Recipe Index</p>
+          </div>
+        </div>
+        <div class="snapshot-stamp">
+          <span>Reviewed</span>
+          <strong id="snapshot-date">Loading…</strong>
+        </div>
+      </div>
+      <div class="creator-credit" aria-label="Collection attribution policy">
+        <span>Collection standard / 01</span>
+        <strong>Every recipe credits its original publisher</strong>
+        <small>Direct source links ↗</small>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div class="intro__copy">
+          <p class="eyebrow">Curated vegetarian ledger / 02</p>
+          <h1 id="page-title">Protein worth<br>the calories.</h1>
+          <p class="intro__lede"><strong id="hero-count">50</strong> egg-free vegetarian recipes that clear both gates: at least 10 g protein per serving and 10 g protein per 100 kcal. Soy, tempeh, seitan, dairy, and protein powder are all valid; drinks do not run the catalogue.</p>
+        </div>
+        <aside class="method-note" aria-labelledby="method-title">
+          <p class="method-note__number">10 + 10</p>
+          <div>
+            <h2 id="method-title">The admission rule</h2>
+            <p>At least 10 g total protein and at least 10 g protein per 100 kcal, calculated from the publisher's protein and calorie values for the same serving.</p>
+          </div>
+        </aside>
+      </section>
+
+      <section class="coverage-strip" aria-label="Collection composition">
+        <div class="coverage-item coverage-item--primary">
+          <span>Qualified recipes</span>
+          <strong id="coverage-recipes">—</strong>
+          <small>clear both gates</small>
+        </div>
+        <div class="coverage-item">
+          <span>Food</span>
+          <strong id="coverage-foods">—</strong>
+          <small>meals through desserts</small>
+        </div>
+        <div class="coverage-item">
+          <span>Drinks</span>
+          <strong id="coverage-drinks">—</strong>
+          <small>kept deliberately small</small>
+        </div>
+        <div class="coverage-item">
+          <span>Publishers</span>
+          <strong id="coverage-publishers">—</strong>
+          <small>blogs and YouTube</small>
+        </div>
+        <div class="coverage-item">
+          <span>Easy in India</span>
+          <strong id="coverage-india">—</strong>
+          <small>common ingredients</small>
+        </div>
+      </section>
+
+      <section class="control-deck" aria-labelledby="controls-title">
+        <div class="control-deck__heading">
+          <div>
+            <p class="eyebrow">Narrow the ledger / 03</p>
+            <h2 id="controls-title">Find something you would actually cook</h2>
+          </div>
+          <button class="text-button" id="reset-controls" type="button">Reset all</button>
+        </div>
+
+        <form class="controls" id="recipe-controls" role="search">
+          <label class="field field--search">
+            <span>Ingredient, recipe, or publisher</span>
+            <input id="search-input" name="query" type="search" placeholder="Try tofu, cottage cheese, curry…" autocomplete="off">
+          </label>
+          <div class="ingredient-exclusion-control field--exclusions">
+            <label class="field">
+              <span>Exclude ingredients</span>
+              <select id="ingredient-exclusion-select" name="ingredientExclusion">
+                <option value="">Choose an ingredient…</option>
+              </select>
+            </label>
+            <div class="ingredient-exclusion-list" id="ingredient-exclusion-list" aria-live="polite" hidden></div>
+          </div>
+          <div class="secondary-controls" id="secondary-controls">
+            <label class="field">
+              <span>Recipe format</span>
+              <select id="format-filter" name="format">
+                <option value="all">All formats</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Protein source</span>
+              <select id="protein-source-filter" name="proteinSource">
+                <option value="all">All protein sources</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>India fit</span>
+              <select id="india-fit-filter" name="indiaFit">
+                <option value="all">All India fits</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Diet</span>
+              <select id="dietary-filter" name="dietary">
+                <option value="all">Vegan + vegetarian</option>
+              </select>
+            </label>
+          </div>
+          <label class="field field--sort">
+            <span>Sort by</span>
+            <select id="sort-filter" name="sort">
+              <option value="curated">Curated · food first</option>
+              <option value="protein-density">Protein / 100 kcal</option>
+              <option value="protein-density-asc">Protein / 100 kcal, low to high</option>
+              <option value="protein">Total protein</option>
+              <option value="protein-asc">Total protein, low to high</option>
+              <option value="calories">Calories, low to high</option>
+              <option value="calories-desc">Calories, high to low</option>
+              <option value="title">Recipe title A–Z</option>
+              <option value="title-desc">Recipe title Z–A</option>
+            </select>
+          </label>
+          <button class="mobile-filter-toggle" id="mobile-filter-toggle" type="button" aria-expanded="false" aria-controls="secondary-controls">More filters <span aria-hidden="true">+</span></button>
+        </form>
+      </section>
+
+      <section class="ledger" id="recipe-ledger" aria-labelledby="ledger-title">
+        <div class="ledger__heading">
+          <div>
+            <p class="eyebrow">Qualified collection / 04</p>
+            <h2 id="ledger-title">Recipe ledger</h2>
+          </div>
+          <p class="result-count" id="result-count" role="status" aria-live="polite">Loading recipes…</p>
+        </div>
+
+        <div class="ledger-head" role="group" aria-label="Sort recipes by column">
+          <button class="ledger-sort" type="button" data-ledger-sort="title" aria-pressed="false">Recipe <span data-sort-indicator aria-hidden="true">↕</span></button>
+          <button class="ledger-sort" type="button" data-ledger-sort="protein" aria-pressed="false">Protein <span data-sort-indicator aria-hidden="true">↕</span></button>
+          <button class="ledger-sort" type="button" data-ledger-sort="calories" aria-pressed="false">Calories <span data-sort-indicator aria-hidden="true">↕</span></button>
+          <button class="ledger-sort" type="button" data-ledger-sort="protein-density" aria-pressed="false">P / 100 <span data-sort-indicator aria-hidden="true">↕</span></button>
+          <span class="ledger-head__static">India fit</span>
+          <span class="ledger-head__static">Source</span>
+        </div>
+
+        <div class="loading-state" id="loading-state">
+          <span class="loading-rule"></span>
+          <p>Opening the checked recipe collection…</p>
+        </div>
+        <div class="recipe-list" id="recipe-list"></div>
+        <div class="empty-state" id="empty-state" hidden>
+          <p class="empty-state__code">0 matches</p>
+          <h3>No recipe clears those filters.</h3>
+          <p>Remove an exclusion or search more broadly.</p>
+          <button class="action-button" id="empty-reset" type="button">Reset the ledger</button>
+        </div>
+        <div class="error-state" id="error-state" hidden role="alert">
+          <p class="empty-state__code">Collection unavailable</p>
+          <h3>The checked recipe data could not be opened.</h3>
+          <p>Confirm the server was started from this repository, then try again.</p>
+          <button class="action-button" id="retry-load" type="button">Retry collection</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-text">
+        <p>Macros are publisher-supplied comparison aids, not medical advice. Brands and substitutions can change the result.</p>
+        <p>Selection: egg-free vegetarian · ≥10 g protein · ≥10 g protein / 100 kcal · direct original-source credit on every row.</p>
+        <p>PostHog and Microsoft Clarity measure aggregate use and interactions on this public, no-account recipe index.</p>
+      </div>
+      <a
+        class="footer-github-link"
+        href="https://github.com/Significant-Hobbies/veg-protein-food"
+        aria-label="GitHub repository"
+        title="GitHub repository"
+        target="_blank"
+        rel="noopener noreferrer"
+      ><svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a>
+    </footer>
+
+    <script src="../../app.js"></script>
+    <script
+      is:inline
+      src="https://sassmaker.com/project-strip.js"
+      data-project="veg-protein-food"
+      crossorigin="anonymous"
+      defer
+    ></script>
+    <script
+      is:inline
+      src="https://sassmaker.com/ai-chat-footer.js"
+      data-name="Recipe Index"
+      crossorigin="anonymous"
+      defer
+    ></script>
+  </body>
+</html>

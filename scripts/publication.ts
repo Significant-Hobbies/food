@@ -53,14 +53,14 @@ const MULTI_PREDICTION_SOURCES = new Set([
 ]);
 
 export const CURRENT_PUBLICATION_ADAPTER_VERSIONS: Readonly<Record<string, string>> = Object.freeze({
-  open_food_facts: "off-bulk-v6",
+  open_food_facts: "off-bulk-v8",
   open_food_facts_api: "off-api-enrichment-v6",
   open_food_facts_robotoff: "robotoff-api-v8",
   open_food_facts_robotoff_ingredients: "robotoff-ingredients-api-v3",
 });
 
 export const AUTOMATIC_DISCOVERY_DROP_CEILING = 0.2;
-export const AUTOMATIC_PUBLICATION_REPOSITORY = "Significant-Hobbies/protein-index";
+export const AUTOMATIC_PUBLICATION_REPOSITORY = "Significant-Hobbies/food";
 export const DENIED_EXTRACTION_RUN_IDS = new Set([29551181430, 29552807113]);
 
 export const AUTOMATIC_PUBLICATION_FAMILIES = {
