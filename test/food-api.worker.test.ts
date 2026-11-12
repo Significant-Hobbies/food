@@ -1,6 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import type { Recipe } from "../shared/recipes";
+import { getProductDetail } from "../worker/catalog";
 
 const worker = exports.default;
 
@@ -15,11 +16,27 @@ describe("Food public data interfaces", () => {
         VALUES ('food-quarantine-review', 'nutrition_validation', 80, 'open', ?, '[]', ?, '2026-11-12T00:00:00Z')`).bind(id, JSON.stringify({ code: "source_label_visual_mismatch", severity: "warning" })).run();
       expect((await detail()).nutritionStatus).toBe("missing");
       await env.DB.prepare("UPDATE review_items SET evidence_json = ? WHERE id = 'food-quarantine-review'").bind(JSON.stringify({ code: "source_label_visual_mismatch", severity: "error" })).run();
+      await env.DB.prepare("UPDATE review_items SET evidence_json = ? WHERE id = 'food-quarantine-review'").bind(JSON.stringify({ code: "robotoff_missing_core_nutrients", severity: "error" })).run();
+      expect((await detail()).nutritionStatus).toBe("missing");
+      await env.DB.prepare("UPDATE review_items SET evidence_json = ? WHERE id = 'food-quarantine-review'").bind(JSON.stringify({ code: "source_label_visual_mismatch", severity: "error" })).run();
       const quarantined = await detail();
       expect(quarantined.nutritionStatus).toBe("conflict");
       expect(quarantined.nutrition.calories).toBeNull();
       expect(quarantined.nutrition.proteinGrams).toBeNull();
       expect(quarantined.metrics.proteinPer100Calories.value).toBeNull();
+      // Explain the query actually executed by the catalog, using the real D1 database.
+      const queries: string[] = [];
+      const observedDb = new Proxy(env.DB, {
+        get(target, key) {
+          if (key === "prepare") return (query: string) => { queries.push(query); return target.prepare(query); };
+          const value = Reflect.get(target, key);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+      await getProductDetail(observedDb, id);
+      const plan = await env.DB.prepare(`EXPLAIN QUERY PLAN ${queries[0]}`).bind(id).all<{ detail: string }>();
+      expect(plan.results.map((row) => row.detail).join("\n")).toMatch(/SEARCH nutrition_error USING (?:COVERING )?INDEX idx_review_open_source_error_product \(product_id=\?\)/);
+
       const search = await (await worker.fetch("http://localhost/api/products?q=quarantine%20boundary&scope=all&verification=conflict")).json() as { products: Array<{ id: string; nutritionStatus: string }> };
       expect(search.products).toEqual(expect.arrayContaining([expect.objectContaining({ id, nutritionStatus: "conflict" })]));
       await env.DB.prepare("UPDATE review_items SET status = 'dismissed' WHERE id = 'food-quarantine-review'").run();

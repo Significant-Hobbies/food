@@ -191,6 +191,8 @@ const NUTRITION_STATUS_SQL = `CASE
           AND nutrition_error.type = 'nutrition_validation'
           AND CASE WHEN json_valid(nutrition_error.evidence_json)
             THEN json_extract(nutrition_error.evidence_json, '$.severity') END = 'error'
+          AND CASE WHEN json_valid(nutrition_error.evidence_json)
+            THEN json_extract(nutrition_error.evidence_json, '$.code') END NOT GLOB 'robotoff_*'
       ) THEN 'conflict'
       WHEN n.status = 'verified' THEN 'unverified'
       ELSE n.status
