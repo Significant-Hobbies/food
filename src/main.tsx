@@ -16,5 +16,5 @@ void mount().catch(() => {
   const retry = document.createElement("button");
   retry.textContent = "Reload Food";
   retry.onclick = () => window.location.reload();
-  root.append(retry);
+  root.appendChild(retry);
 });
