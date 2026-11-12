@@ -52,8 +52,8 @@ tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover { background: #fbfcfc; }
 .catalog-desktop th:first-child { width: 40%; }
 .product-identity { display: flex; gap: 16px; align-items: center; min-width: 240px; }
-.product-visual { width: 42px; height: 62px; flex: 0 0 42px; display: grid; place-items: center; color: #62717c; background: #f6f7f8; font-size: 13px; }
-.product-visual img { width: 100%; height: 100%; object-fit: contain; }
+.product-visual { width: 42px; height: 62px; flex: 0 0 42px; display: grid; grid-template-rows: minmax(0, 1fr); place-items: center; overflow: hidden; color: #62717c; background: #f6f7f8; font-size: 13px; }
+.product-visual img { width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: contain; }
 .product-link { display: block; border: 0; padding: 8px 0; background: transparent; text-align: left; color: var(--foreground); }
 .product-link strong { font-weight: 600; font-size: 13px; }
 .product-link:hover strong { color: var(--brand-ink); text-decoration: underline; text-underline-offset: 3px; }
