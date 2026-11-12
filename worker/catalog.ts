@@ -182,17 +182,28 @@ export function validateSearch(input: URLSearchParams): { value?: SearchInput; e
   return { value };
 }
 
+const NUTRITION_STATUS_SQL = `CASE
+      WHEN verified_nutrition.product_id IS NOT NULL THEN 'verified'
+      WHEN machine_nutrition.product_id IS NOT NULL THEN 'machine_verified'
+      WHEN n.product_id IS NULL AND EXISTS (
+        SELECT 1 FROM review_items nutrition_error
+        WHERE nutrition_error.product_id = p.id AND nutrition_error.status = 'open'
+          AND nutrition_error.type = 'nutrition_validation'
+          AND CASE WHEN json_valid(nutrition_error.evidence_json)
+            THEN json_extract(nutrition_error.evidence_json, '$.severity') END = 'error'
+          AND CASE WHEN json_valid(nutrition_error.evidence_json)
+            THEN json_extract(nutrition_error.evidence_json, '$.code') END NOT GLOB 'robotoff_*'
+      ) THEN 'conflict'
+      WHEN n.status = 'verified' THEN 'unverified'
+      ELSE n.status
+    END`;
+
 const SELECT_PRODUCT = `
   SELECT p.id, p.gtin, p.image_url, p.nutrition_image_url, p.brand, p.name, p.flavour, p.category,
     p.net_quantity_grams, p.serving_size_grams, p.marketed_protein,
     p.marketed_reasons_json, p.nutritionally_protein_dense,
     p.nutrition_reasons_json, p.completeness, p.completeness_missing_json,
-    CASE
-      WHEN verified_nutrition.product_id IS NOT NULL THEN 'verified'
-      WHEN machine_nutrition.product_id IS NOT NULL THEN 'machine_verified'
-      WHEN n.status = 'verified' THEN 'unverified'
-      ELSE n.status
-    END AS nutrition_status,
+    ${NUTRITION_STATUS_SQL} AS nutrition_status,
     CASE
       WHEN verified_nutrition.product_id IS NOT NULL AND verified_nutrition.evidence_kind = 'source' THEN 'authoritative_source'
       WHEN verified_nutrition.product_id IS NOT NULL THEN 'human_reviewed_label'
@@ -266,12 +277,7 @@ function filtersFor(input: SearchInput): { sql: string; bindings: Array<string |
     if (input.dense !== "unknown") bindings.push(input.dense === "true" ? 1 : 0);
   }
   if (input.verification !== "all") {
-    clauses.push(`COALESCE(CASE
-      WHEN verified_nutrition.product_id IS NOT NULL THEN 'verified'
-      WHEN machine_nutrition.product_id IS NOT NULL THEN 'machine_verified'
-      WHEN n.status = 'verified' THEN 'unverified'
-      ELSE n.status
-    END, 'missing') = ?`);
+    clauses.push(`COALESCE(${NUTRITION_STATUS_SQL}, 'missing') = ?`);
     bindings.push(input.verification);
   }
   if (input.ingredientVerification !== "all") {
