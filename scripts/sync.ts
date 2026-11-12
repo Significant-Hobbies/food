@@ -114,10 +114,10 @@ async function splitSqlFile(inputPath: string, maxBytes = 60_000): Promise<strin
 
 async function applyLocal(importSqlPath: string, persistTo?: string): Promise<void> {
   const persistence = persistTo ? ["--persist-to", persistTo] : [];
-  await run("pnpm", ["exec", "wrangler", "d1", "migrations", "apply", "protein-index", "--local", ...persistence]);
+  await run("pnpm", ["exec", "wrangler", "--config", "wrangler.food.jsonc", "d1", "migrations", "apply", "food", "--local", ...persistence]);
   const chunks = await splitSqlFile(importSqlPath);
   for (const chunk of chunks) {
-    await run("pnpm", ["exec", "wrangler", "d1", "execute", "protein-index", "--local", ...persistence, "--file", chunk]);
+    await run("pnpm", ["exec", "wrangler", "--config", "wrangler.food.jsonc", "d1", "execute", "food", "--local", ...persistence, "--file", chunk]);
   }
 }
 
@@ -300,19 +300,19 @@ async function publishCommand(): Promise<void> {
   const target = remote ? "--remote" : "--local";
   let before: PublicationState | null = null;
   if (automatic) {
-    const migrationState = await runCapture("pnpm", ["exec", "wrangler", "d1", "migrations", "list", "protein-index", "--remote"]);
+    const migrationState = await runCapture("pnpm", ["exec", "wrangler", "--config", "wrangler.food.jsonc", "d1", "migrations", "list", "food", "--remote"]);
     assertNoPendingD1Migrations(migrationState);
     before = parsePublicationState(await runCapture("pnpm", [
-      "exec", "wrangler", "d1", "execute", "protein-index", "--remote", "--json", "--command", publicationStateQuery(snapshot.manifest, snapshot.exactExtraction),
+      "exec", "wrangler", "--config", "wrangler.food.jsonc", "d1", "execute", "food", "--remote", "--json", "--command", publicationStateQuery(snapshot.manifest, snapshot.exactExtraction),
     ]));
   } else {
-    await run("pnpm", ["exec", "wrangler", "d1", "migrations", "apply", "protein-index", target]);
+    await run("pnpm", ["exec", "wrangler", "--config", "wrangler.food.jsonc", "d1", "migrations", "apply", "food", target]);
   }
   if (remote) {
-    await run("pnpm", ["exec", "wrangler", "d1", "execute", "protein-index", "--remote", "--yes", "--file", importSqlPath]);
+    await run("pnpm", ["exec", "wrangler", "--config", "wrangler.food.jsonc", "d1", "execute", "food", "--remote", "--yes", "--file", importSqlPath]);
   } else {
     const chunks = await splitSqlFile(importSqlPath);
-    for (const chunk of chunks) await run("pnpm", ["exec", "wrangler", "d1", "execute", "protein-index", "--local", ...(persistTo ? ["--persist-to", persistTo] : []), "--file", chunk]);
+    for (const chunk of chunks) await run("pnpm", ["exec", "wrangler", "--config", "wrangler.food.jsonc", "d1", "execute", "food", "--local", ...(persistTo ? ["--persist-to", persistTo] : []), "--file", chunk]);
   }
   let automaticEvidence: Record<string, unknown> | null = null;
   let products: number;
@@ -320,7 +320,7 @@ async function publishCommand(): Promise<void> {
   let completedRuns: number | null = null;
   if (automatic && before) {
     const after = parsePublicationState(await runCapture("pnpm", [
-      "exec", "wrangler", "d1", "execute", "protein-index", "--remote", "--json", "--command", publicationStateQuery(snapshot.manifest, snapshot.exactExtraction),
+      "exec", "wrangler", "--config", "wrangler.food.jsonc", "d1", "execute", "food", "--remote", "--json", "--command", publicationStateQuery(snapshot.manifest, snapshot.exactExtraction),
     ]));
     const postconditions = assertAutomaticPublicationPostconditions(
       before,
@@ -335,7 +335,7 @@ async function publishCommand(): Promise<void> {
     automaticEvidence = { contract: automaticContract, before, after, postconditions };
   } else {
     const rawVerification = await runCapture("pnpm", [
-      "exec", "wrangler", "d1", "execute", "protein-index", target, "--json", "--command",
+      "exec", "wrangler", "--config", "wrangler.food.jsonc", "d1", "execute", "food", target, "--json", "--command",
       "SELECT COUNT(*) AS products FROM products WHERE is_active = 1; SELECT COUNT(*) AS completed_runs FROM ingestion_runs WHERE status = 'completed'; SELECT COUNT(*) AS source_records FROM source_records;",
     ]);
     const verification = JSON.parse(rawVerification) as Array<{ success?: boolean; results?: Array<Record<string, number>> }>;
@@ -360,7 +360,7 @@ async function publishCommand(): Promise<void> {
 
 async function reviewExportCommand(): Promise<void> {
   const raw = await runCapture("pnpm", [
-    "exec", "wrangler", "d1", "execute", "protein-index", "--local", "--json", "--command",
+    "exec", "wrangler", "--config", "wrangler.food.jsonc", "d1", "execute", "food", "--local", "--json", "--command",
     `SELECT id, source_id, source_record_key, source_record_id, source_content_hash, product_id,
       candidate_hash, field_family, decision, payload_json, evidence_url, rationale, decided_by, decided_at,
       extraction_attempt_id, label_asset_id

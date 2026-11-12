@@ -7,7 +7,7 @@
  * returns HTML shells for /llms.txt or /api/ai.
  */
 
-const ORIGIN = "https://protein.significanthobbies.com";
+const ORIGIN = "https://food.significanthobbies.com";
 
 export interface PublicProductRoute {
   id: string;
@@ -41,7 +41,7 @@ export async function isActivePublicProduct(db: D1Database, id: string): Promise
   return row?.active === 1;
 }
 
-export const LLMS_TXT = `# Protein Index
+export const LLMS_TXT = `# Food
 
 > Source-aware catalog of Indian food products. Separates verified label
 > evidence from broader discovery data. Does not claim complete coverage of
@@ -53,6 +53,9 @@ below — do not scrape the empty client shell.
 ## Product
 
 - [Catalog UI](${ORIGIN}/): Human browse / compare experience (SPA)
+- [Recipes](${ORIGIN}/recipes): Source-linked vegetarian recipes
+- [Recipe JSON](${ORIGIN}/api/recipes): Search the curated collection
+- [Data quality](${ORIGIN}/api/data-quality): Snapshot quality and limitations
 - [This index](${ORIGIN}/llms.txt): Agent entrypoint
 - [Agent catalog](${ORIGIN}/api/ai): Machine-readable surface list
 - [Homepage markdown](${ORIGIN}/index.md): Product brief without JS
@@ -69,10 +72,10 @@ below — do not scrape the empty client shell.
 ## Optional
 
 - [Foundry](https://sassmaker.com): Parent fleet showcase
-- [GitHub](https://github.com/Significant-Hobbies/protein-index): Source
+- [GitHub](https://github.com/Significant-Hobbies/food): Source
 `;
 
-export const INDEX_MD = `# Protein Index
+export const INDEX_MD = `# Food
 
 Source-aware catalog of Indian food products for comparing protein foods with
 **verified label evidence** separated from broader discovery data.
@@ -111,7 +114,7 @@ Prefer JSON APIs or product markdown over the SPA HTML shell.
 
 export function buildApiAiCatalog(products: PublicProductRoute[], origin = ORIGIN) {
   return {
-    name: "Protein Index",
+    name: "Food",
     version: "1",
     url: origin,
     llms: `${origin}/llms.txt`,
@@ -119,6 +122,8 @@ export function buildApiAiCatalog(products: PublicProductRoute[], origin = ORIGI
     sitemap: `${origin}/sitemap.xml`,
     markdown: { suffix: ".md", negotiation: true },
     surfaces: [
+      { id: "recipes", url: `${origin}/api/recipes`, md: null, kind: "api", description: "Curated vegetarian recipes; publisher-stated serving macros" },
+      { id: "data-quality", url: `${origin}/api/data-quality`, md: null, kind: "api", description: "Source snapshot quality, attribution and limitations" },
       {
         id: "home",
         url: `${origin}/`,
@@ -171,7 +176,7 @@ export function buildApiAiCatalog(products: PublicProductRoute[], origin = ORIGI
 }
 
 export function buildSitemapXml(products: PublicProductRoute[], origin = ORIGIN): string {
-  const urls = ["/", ...products.map((product) => product.path)];
+  const urls = ["/", "/recipes", "/sources", ...products.map((product) => product.path)];
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls
     .map((path) => `  <url><loc>${origin}${path}</loc></url>`)
     .join("\n")}\n</urlset>\n`;
@@ -251,7 +256,7 @@ export function productToMarkdown(product: Record<string, unknown>, origin = ORI
     `- Nutrition evidence: ${String(product.nutritionStatus ?? "missing")}`,
     `- Ingredient evidence: ${String(product.ingredientStatus ?? "missing")}`,
     "- Prefer verified label evidence fields over discovery-only sources.",
-    "- Missing values mean not verified — do not invent numbers.",
+    "- Missing values were not provided by the source. Do not invent numbers.",
     ""
   );
 
@@ -263,7 +268,7 @@ export function productToHtml(product: Record<string, unknown>, origin = ORIGIN)
   const canonical = `${origin}${identity.path}`;
   const nutrition = object(product.nutrition ?? product.verified_nutrition);
   const metrics = object(product.metrics);
-  const description = `${identity.brand ? `${identity.brand} ` : ""}${identity.name}: public macro and protein-density summary from Protein Index.`;
+  const description = `${identity.brand ? `${identity.brand} ` : ""}${identity.name}: public macro and protein-density summary from Food.`;
   const facts = [
     ["Protein", nutrition.proteinGrams, "g"],
     ["Carbohydrate", nutrition.carbohydrateGrams, "g"],
@@ -272,6 +277,13 @@ export function productToHtml(product: Record<string, unknown>, origin = ORIGIN)
     ["Calories", nutrition.calories, "kcal"],
     ["Protein / 100 kcal", metricValue(metrics.proteinPer100Calories), "g"],
   ] as const;
+  const basis = nutrition.basis === "per_100g" ? "per 100 g" : nutrition.basis === "per_100ml" ? "per 100 ml" : "basis not recorded";
+  const observation = typeof nutrition.observedAt === "string" && Number.isFinite(Date.parse(nutrition.observedAt)) ? nutrition.observedAt.slice(0, 10) : "not recorded";
+  let sourceUrl: string | null = null;
+  try {
+    const source = new URL(String(product.nutritionEvidenceUrl ?? ""));
+    if (source.protocol === "https:" && !source.username && !source.password) sourceUrl = source.href;
+  } catch { /* Missing source remains explicit. */ }
   const jsonLd = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "Product",
@@ -283,19 +295,20 @@ export function productToHtml(product: Record<string, unknown>, origin = ORIGIN)
   return `<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escapeHtml(identity.name)} · Protein Index</title>
+<title>${escapeHtml(identity.name)} · Food</title>
 <meta name="description" content="${escapeHtml(description)}">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
 <link rel="canonical" href="${escapeHtml(canonical)}">
-<meta property="og:type" content="product"><meta property="og:site_name" content="Protein Index">
-<meta property="og:title" content="${escapeHtml(identity.name)} · Protein Index">
+<meta property="og:type" content="product"><meta property="og:site_name" content="Food">
+<meta property="og:title" content="${escapeHtml(identity.name)} · Food">
 <meta property="og:description" content="${escapeHtml(description)}"><meta property="og:url" content="${escapeHtml(canonical)}">
 <script type="application/ld+json">${jsonLd}</script>
-<style>:root{color:#17221c;background:#f1f0e8;font-family:Inter,ui-sans-serif,system-ui,sans-serif}*{box-sizing:border-box}html,body{overflow-x:hidden}body{margin:0;background:radial-gradient(circle at 8% -12%,#fffef7 0,transparent 32%),#f1f0e8}a{color:#0c6b47}a:focus-visible{outline:3px solid rgba(12,107,71,.28);outline-offset:3px}.shell{width:min(920px,calc(100% - 32px));margin:0 auto;padding:32px 0 64px}.brand{display:inline-flex;align-items:center;gap:10px;color:#17221c;text-decoration:none;font-weight:800}.mark{display:grid;place-items:center;width:42px;height:42px;border-radius:50% 50% 50% 15px;background:#17221c;color:#fff}.crumb{margin:56px 0 10px;color:#0c6b47;font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em}h1{max-width:18ch;margin:0;font-family:Georgia,serif;font-size:clamp(2.6rem,8vw,5rem);font-weight:500;line-height:.94;letter-spacing:-.04em;overflow-wrap:anywhere}.meta{color:#566158;font-size:1rem;line-height:1.6}.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;margin:38px 0;background:#d8d8cc;border:1px solid #d8d8cc;border-radius:14px;overflow:hidden}.fact{min-width:0;padding:20px;background:#fbfaf5}.fact span,.state span{display:block;color:#566158;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;overflow-wrap:anywhere}.fact strong{display:block;margin-top:8px;font-family:Georgia,serif;font-size:1.55rem;font-weight:500}.evidence{display:grid;grid-template-columns:1fr 1fr;gap:12px}.state{padding:18px;border-radius:12px;background:#efeee6}.state strong{display:block;margin-top:6px;color:#074b34;text-transform:capitalize}.note{max-width:70ch;margin-top:28px;color:#566158;line-height:1.65}@media(max-width:640px){.shell{padding-top:20px}.crumb{margin-top:40px}.facts{grid-template-columns:repeat(2,minmax(0,1fr))}.evidence{grid-template-columns:1fr}}@media(max-width:430px){h1{font-size:clamp(2.25rem,12vw,3.3rem)}.fact{padding:16px 12px}.fact span{font-size:.58rem;letter-spacing:.02em}.fact strong{font-size:1.35rem}}</style>
+<style>:root{color:#1b252b;background:#f4f5f6;font-family:system-ui,sans-serif}*{box-sizing:border-box}body{margin:0}a{color:#925000;text-underline-offset:3px}a:focus-visible{outline:3px solid #b57924;outline-offset:3px}.shell{width:min(920px,calc(100% - 40px));margin:auto;padding:30px 0 64px}.brand{display:block;padding:20px 24px;background:#19242b;color:white;text-decoration:none;font-size:24px;font-weight:750}.mark{display:none}.crumb{margin:34px 0 12px;color:#52606b;font-size:13px}h1{max-width:28ch;margin:0;font-size:clamp(28px,5vw,44px);font-weight:650;line-height:1.15;letter-spacing:-.035em;overflow-wrap:anywhere}.meta{color:#52606b;font-size:14px;line-height:1.6}.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:30px 0;background:white;border:1px solid #d7dde1}.fact{min-width:0;padding:20px;border-bottom:1px solid #d7dde1}.fact span,.state span{display:block;color:#52606b;font-size:12px}.fact strong{display:block;margin-top:8px;font-size:22px;font-weight:550;font-variant-numeric:tabular-nums}.evidence{display:grid;grid-template-columns:1fr 1fr;gap:20px}.state{padding:18px;background:#e9edef}.state strong{display:block;margin-top:6px;font-size:14px}.note{max-width:75ch;margin-top:28px;color:#52606b;line-height:1.7;font-size:13px}@media(max-width:640px){.facts{grid-template-columns:repeat(2,minmax(0,1fr))}.evidence{grid-template-columns:1fr}.fact{padding:18px 14px}}</style>
 </head><body><main class="shell">
-<a class="brand" href="/"><span class="mark" aria-hidden="true">PI</span><span>Protein Index</span></a>
-<p class="crumb">Public product record</p><h1>${escapeHtml(identity.name)}</h1>
+<a class="brand" href="/"><span class="mark" aria-hidden="true">F</span><span>Food</span></a>
+<p class="crumb"><a href="/">Foods</a> / Product record</p><h1>${escapeHtml(identity.name)}</h1>
 <p class="meta">${identity.brand ? `${escapeHtml(identity.brand)} · ` : ""}${identity.gtin ? `GTIN ${escapeHtml(identity.gtin)}` : "Canonical product"}</p>
+<p class="meta">Nutrition ${escapeHtml(basis)} · observed ${escapeHtml(observation)}. ${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noreferrer">View original source</a>` : "Original source link unavailable."}</p>
 <section class="facts" aria-label="Macro comparison">${facts.map(([label, value, unit]) => `<div class="fact"><span>${escapeHtml(label)}</span><strong>${escapeHtml(displayValue(value, unit))}</strong></div>`).join("")}</section>
 <section class="evidence" aria-label="Evidence state"><div class="state"><span>Nutrition evidence</span><strong>${escapeHtml(product.nutritionStatus ?? "missing")}</strong></div><div class="state"><span>Ingredient evidence</span><strong>${escapeHtml(product.ingredientStatus ?? "missing")}</strong></div></section>
 <p class="note">Discovery values remain visibly distinct from Trusted evidence. Missing values are not estimates. <a href="${escapeHtml(identity.path)}.md">Read the Markdown version</a> or <a href="/api/products/${encodeURIComponent(identity.id)}">view JSON</a>.</p>

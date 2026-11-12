@@ -24,7 +24,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: protein-index-production-publication
+  group: food-production-publication
   cancel-in-progress: false
 
 jobs:
@@ -82,7 +82,7 @@ jobs:
         run: |
           set -euo pipefail
           query="$(< .data/publication/source-state.sql)"
-          pnpm exec wrangler d1 execute protein-index --remote --yes --json \
+          pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --json \
             --command "$query" \
             > .data/publication/source-state.json
 
@@ -95,7 +95,7 @@ jobs:
           --expected-ledger-hash "$EXPECTED_LEDGER_HASH"
 
       - name: Apply the reviewed decision schema
-        run: pnpm exec wrangler d1 migrations apply protein-index --remote
+        run: pnpm exec wrangler --config wrangler.food.jsonc d1 migrations apply food --remote
 
       - name: Read existing durable decision state
         run: |
@@ -106,7 +106,7 @@ jobs:
             --kind decisions \
             --expected-ledger-hash "$EXPECTED_LEDGER_HASH"
           query="$(< .data/publication/decision-state.sql)"
-          pnpm exec wrangler d1 execute protein-index --remote --yes --json \
+          pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --json \
             --command "$query" \
             > .data/publication/decision-state.json
 
@@ -122,7 +122,7 @@ jobs:
 
       - name: Apply exact reviewed decisions
         run: >-
-          pnpm exec wrangler d1 execute protein-index --remote --yes
+          pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes
           --file .data/publication/apply.sql
 
       - name: Query publication postconditions
@@ -133,7 +133,7 @@ jobs:
             --output .data/publication/postconditions.sql \
             --expected-ledger-hash "$EXPECTED_LEDGER_HASH"
           query="$(< .data/publication/postconditions.sql)"
-          pnpm exec wrangler d1 execute protein-index --remote --yes --json \
+          pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --json \
             --command "$query" \
             > .data/publication/postconditions.json
 

@@ -6,6 +6,7 @@ import { createInterface } from "node:readline";
 import { Transform, type TransformCallback } from "node:stream";
 import { once } from "node:events";
 import { createGunzip } from "node:zlib";
+import labelExceptions from "../../data/source-label-exceptions.json";
 import { classifyProtein } from "../../shared/classification";
 import { normalizeGtin, normalizeText, parseQuantity } from "../../shared/gtin";
 import { invalidIngredientPercentages, parseAdditives, parseAllergens, parseIngredients } from "../../shared/ingredients";
@@ -20,7 +21,7 @@ import type {
   ValidationIssue,
 } from "../../shared/types";
 
-export const OPEN_FOOD_FACTS_ADAPTER_VERSION = "off-bulk-v6";
+export const OPEN_FOOD_FACTS_ADAPTER_VERSION = "off-bulk-v8";
 export const OPEN_FOOD_FACTS_EXPORT_URL =
   "https://static.openfoodfacts.org/data/en.openfoodfacts.org.products.csv.gz";
 
@@ -93,9 +94,16 @@ function nutrientValue(record: RawRecord, key: string): number | null {
   return finiteNumber(nutritionContainer(record)[key]);
 }
 
-function parseCoreNutrition(record: RawRecord): NutritionPer100g {
+function parseCoreNutrition(record: RawRecord, issues: ValidationIssue[]): NutritionPer100g {
   const nutrition = emptyNutrition();
   nutrition.calories = nutrientValue(record, "energy-kcal_100g");
+  if (nutrition.calories === null) {
+    const kilojoules = nutrientValue(record, "energy-kj_100g") ?? nutrientValue(record, "energy_100g");
+    if (kilojoules !== null) {
+      nutrition.calories = kilojoules / 4.184;
+      issues.push({ code: "calories_derived_from_kj", message: "Calories converted from source kilojoules using 1 kcal = 4.184 kJ", severity: "warning", field: "calories" });
+    }
+  }
   nutrition.proteinGrams = nutrientValue(record, "proteins_100g");
   nutrition.carbohydrateGrams = nutrientValue(record, "carbohydrates_100g");
   nutrition.sugarGrams = nutrientValue(record, "sugars_100g");
@@ -192,6 +200,9 @@ export function normalizeOpenFoodFactsRecord(
   source: OpenFoodFactsNormalizationSource = BULK_SOURCE,
 ): { staged: StagedProduct | null; issues: ValidationIssue[] } {
   const issues: ValidationIssue[] = [];
+  if (record.obsolete === true || record.obsolete === 1 || record.obsolete === "1") {
+    return { staged: null, issues: [{ code: "obsolete_source_record", message: "Open Food Facts marks this product as obsolete", severity: "error", field: "identity" }] };
+  }
   const sourceRecordId = stringValue(record.code);
   const name = stringValue(record.product_name) ?? stringValue(record.generic_name);
   if (!sourceRecordId || !name) {
@@ -203,9 +214,19 @@ export function normalizeOpenFoodFactsRecord(
   if (!gtin) {
     issues.push({ code: "invalid_gtin", message: "Product code is not a valid GTIN", severity: "error", field: "gtin" });
   }
-  const nutritionPer100g = parseCoreNutrition(record);
+  const evidence = compactEvidence(record);
+  const contentHash = createHash("sha256").update(JSON.stringify(evidence)).digest("hex");
+  const nutritionPer100g = parseCoreNutrition(record, issues);
   const basis = nutritionBasis(record);
   const nutritionIssues = validateNutrition(nutritionPer100g, basis === "per_100ml" ? "per_100ml" : "per_100g");
+  const sourceErrors = listValue(record.data_quality_errors_tags).filter((tag) => /(?:nutrition|nutriment|energy|protein|carbohydrate|saturated-fat|sugars|sodium)/.test(tag));
+  if (sourceErrors.length > 0) {
+    nutritionIssues.push({ code: "source_nutrition_error", message: `Open Food Facts flags this nutrition: ${sourceErrors.join(", ")}`, severity: "error", field: "nutrition" });
+  }
+  const labelException = labelExceptions.find((exception) => exception.sourceRecordId === sourceRecordId && exception.sourceContentHash === contentHash);
+  if (labelException) {
+    nutritionIssues.push({ code: "source_label_visual_mismatch", message: labelException.reason, severity: "error", field: "nutrition" });
+  }
   issues.push(...nutritionIssues);
   const netQuantityGrams = massQuantity(record.quantity, record.product_quantity, record.product_quantity_unit);
   // Open Food Facts defines serving_quantity as a computed gram value when no
@@ -227,8 +248,6 @@ export function normalizeOpenFoodFactsRecord(
       field: "ingredients",
     });
   }
-  const evidence = compactEvidence(record);
-  const contentHash = createHash("sha256").update(JSON.stringify(evidence)).digest("hex");
   const nutrition = {
     per100g: nutritionPer100g,
     servingSizeGrams,
@@ -584,6 +603,7 @@ export async function stageOpenFoodFacts(options: OpenFoodFactsStageOptions): Pr
     knownExclusions: [
       "Records not tagged for India by Open Food Facts",
       "Source records without both a product code and product name",
+      "Products marked obsolete by Open Food Facts",
       "Products absent from Open Food Facts",
     ],
     disconnectedSources: ["gs1_india_datakart", "brand_owner_feeds", "retailer_offer_feeds"],

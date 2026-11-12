@@ -31,6 +31,7 @@ import type {
 import { validateNutrition } from "../shared/nutrition";
 import type { EvidenceStatus, MetricResult, NormalizedIngredient, NutritionPer100g } from "../shared/types";
 import { api, TerminalEvidenceRequestError } from "./api";
+import imageExceptions from "../data/image-quality-exceptions.json";
 
 type Tab = "catalog" | "reviews" | "coverage";
 
@@ -336,7 +337,7 @@ function ProductVisual({ product, size = "small" }: { product: Pick<CatalogProdu
   const initials = `${product.brand} ${product.name}`.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]?.toUpperCase()).join("");
   return (
     <div className={`product-visual product-visual-${size}`} aria-hidden="true">
-      {product.imageUrl && !failed
+      {product.imageUrl && !failed && !imageExceptions.some((exception) => exception.imageUrl === product.imageUrl)
         ? <img src={product.imageUrl} alt="" loading="lazy" onError={() => setFailed(true)} />
         : <span>{initials || "PI"}</span>}
     </div>

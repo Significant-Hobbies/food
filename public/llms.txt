@@ -1,4 +1,4 @@
-# Protein Index
+# Food
 
 > A searchable index of proteins.
 
@@ -7,9 +7,9 @@
 
 ## Machine surfaces
 
-- [Agent catalog](https://protein.significanthobbies.com/api/ai): JSON inventory of public surfaces
-- [Homepage markdown](https://protein.significanthobbies.com/index.md): Product brief without JS
-- [This index](https://protein.significanthobbies.com/llms.txt)
+- [Agent catalog](https://food.significanthobbies.com/api/ai): JSON inventory of public surfaces
+- [Homepage markdown](https://food.significanthobbies.com/index.md): Product brief without JS
+- [This index](https://food.significanthobbies.com/llms.txt)
 
 ## Optional
 

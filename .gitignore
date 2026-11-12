@@ -19,3 +19,5 @@ dist-docs/
 # Local agent scratch / logs (never committed).
 .agent-log/
 .agent-scratch/
+
+__pycache__/

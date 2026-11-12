@@ -1,5 +1,5 @@
 {
-  "name": "protein-index",
+  "name": "food",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -16,8 +16,8 @@
     "test:unit": "vitest run",
     "test:worker": "vitest run --config vitest.worker.config.ts",
     "test:watch": "vitest",
-    "cf-typegen": "wrangler types",
-    "db:migrate": "wrangler d1 migrations apply protein-index --local",
+    "cf-typegen": "wrangler types --config wrangler.food.jsonc",
+    "db:migrate": "wrangler d1 migrations apply food --config wrangler.food.jsonc --local",
     "data:stage": "tsx scripts/sync.ts stage",
     "data:enrich": "tsx scripts/sync.ts enrich",
     "data:extract": "tsx scripts/sync.ts extract",
@@ -51,10 +51,10 @@
     "docs:build": "blume build",
     "docs:preview": "blume preview",
     "docs:check": "blume check",
-    "release:startup": "wrangler deploy --dry-run --outfile .data/worker.bundle && wrangler check startup --worker .data/worker.bundle --outfile .data/worker-startup.cpuprofile",
-    "release:dry-run": "wrangler deploy --dry-run --outdir .data/deploy-dry-run",
+    "release:startup": "wrangler deploy --dry-run --config dist/food/wrangler.json --outfile .data/worker.bundle && wrangler check startup --worker .data/worker.bundle --outfile .data/worker-startup.cpuprofile",
+    "release:dry-run": "wrangler deploy --dry-run --config dist/food/wrangler.json --outdir .data/deploy-dry-run",
     "release:preflight": "pnpm check && pnpm release:startup && pnpm release:dry-run",
-    "deploy": "bash ../fleet-ops/scripts/fleet-deploy-guard.sh protein-index && pnpm release:preflight && wrangler deploy --strict",
+    "deploy": "node scripts/deploy.mjs",
     "knip": "knip --no-exit-code --reporter symbols",
     "knip:strict": "knip --reporter symbols"
   },
@@ -62,7 +62,8 @@
     "@saas-maker/app-health": "https://github.com/sass-maker/app-health/releases/download/node-v0.4.0/saas-maker-app-health-0.4.0.tgz",
     "hono": "^4.12.30",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "@saas-maker/ui": "github:sass-maker/ui-library#v0.1.33&path:/packages/ui"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.45.0",
@@ -78,6 +79,8 @@
     "typescript": "^7.0.2",
     "vite": "^8.1.4",
     "vitest": "^4.1.10",
-    "wrangler": "^4.111.0"
+    "wrangler": "^4.111.0",
+    "@tailwindcss/vite": "4.3.3",
+    "tailwindcss": "4.3.3"
   }
 }

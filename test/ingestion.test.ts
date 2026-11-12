@@ -98,7 +98,7 @@ const automaticInput = (overrides: Partial<AutomaticPublicationInput> = {}): Aut
   runId: 123,
   headSha: "a".repeat(40),
   headBranch: "main",
-  repository: "Significant-Hobbies/protein-index",
+  repository: "Significant-Hobbies/food",
   artifactName: "open-food-facts-snapshot-123",
   artifactDigest: `sha256:${"b".repeat(64)}`,
   artifactBytes: 1_024,
@@ -194,7 +194,7 @@ async function writeAutomaticArtifact(input: {
     sourceLicenseUrl: "https://opendatacommons.org/licenses/odbl/1-0/",
     sourceRetentionNotes: "Automatic publication test fixture",
     adapterVersion: source === "open_food_facts"
-      ? "off-bulk-v6"
+      ? "off-bulk-v8"
       : source === "open_food_facts_api"
         ? "off-api-enrichment-v6"
         : source === "open_food_facts_robotoff"
@@ -688,7 +688,7 @@ describe("Robotoff ingredient evidence", () => {
       modelVersion: JSON.stringify(result.report.modelVersions),
       parentSourceRunId: result.report.parentSourceRunId,
       parentSourceInputHash: result.report.inputManifestHash!,
-      repository: "Significant-Hobbies/protein-index",
+      repository: "Significant-Hobbies/food",
       workflow: "Extract ingredient label evidence",
       branch: "main",
       headSha: "d".repeat(40),
@@ -1887,7 +1887,7 @@ describe("Open Food Facts bulk staging", () => {
     expect(() => automaticPublicationContract(automaticInput({ headBranch: "feature" }))).toThrow("default-branch");
     expect(() => automaticPublicationContract(automaticInput({ headSha: "abc" }))).toThrow("head SHA");
     expect(() => automaticPublicationContract(automaticInput({ runId: 0 }))).toThrow("run ID");
-    expect(() => automaticPublicationContract(automaticInput({ repository: "fork/protein-index" }))).toThrow("Significant-Hobbies/protein-index");
+    expect(() => automaticPublicationContract(automaticInput({ repository: "fork/protein-index" }))).toThrow("Significant-Hobbies/food");
     expect(() => automaticPublicationContract(automaticInput({ artifactDigest: "abc" }))).toThrow("artifact digest");
     expect(() => automaticPublicationContract(automaticInput({ artifactBytes: 0 }))).toThrow("artifact size");
     expect(() => automaticPublicationContract(automaticInput({
@@ -4082,7 +4082,7 @@ describe("Robotoff label evidence", () => {
       modelVersion: JSON.stringify(report.modelVersions),
       parentSourceRunId: report.parentSourceRunId,
       parentSourceInputHash: report.inputManifestHash!,
-      repository: "Significant-Hobbies/protein-index",
+      repository: "Significant-Hobbies/food",
       workflow: "Extract label evidence with Robotoff",
       branch: "main",
       headSha: "b".repeat(40),

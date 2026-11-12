@@ -1,0 +1,53 @@
+{
+  "usableNutrition": 9655,
+  "completeCoreMacros": 5622,
+  "withIngredients": 8156,
+  "nutritionConflicts": 872,
+  "missingNutrition": 12117,
+  "withLabelImage": 7461,
+  "kilojouleConversions": 20,
+  "sourceErrors": 647,
+  "source": "Open Food Facts Parquet",
+  "sourceUpdatedAt": "2026-11-12T04:49:47+00:00",
+  "importedAt": "2026-11-12T13:55:16.220Z",
+  "recordsRead": 4908827,
+  "indiaRecords": 26101,
+  "stagedRecords": 22794,
+  "excludedRecords": 3307,
+  "canonicalProducts": 22673,
+  "duplicateBarcodes": 0,
+  "downloadPath": "/data/open-food-facts-india.jsonl.gz",
+  "sourceSha256": "454f993914a61bc5ce34dac561b46f2e3996b82e322987a5b91c247be798d69a",
+  "extractSha256": "be30be57188ab2be5590b9e91b6aaefb4fc7b3b70972af4ea83d5da2a40884db",
+  "adapterVersion": "off-bulk-v8",
+  "labelSpotChecks": [
+    {
+      "code": "0075779311145",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/007/577/931/1145/nutrition_en.23.400.jpg",
+      "result": "mismatch",
+      "note": "Source nutrition image states 30 kcal, 0 g fat and 0 g protein per 8 g serving; structured record states 535.7 kcal, 28.6 g fat and 7.1 g protein per 100 g. Values do not reconcile with that image."
+    },
+    {
+      "code": "0748927026245",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/074/892/702/6245/nutrition_pt.16.400.jpg",
+      "result": "mismatch",
+      "note": "Source nutrition image states 120 kcal and 1.5 g fat per 32 g serving (375 kcal and about 4.7 g fat per 100 g); structured record states 406.25 kcal and 6.25 g fat per 100 g. Protein agrees but calories and fat do not."
+    },
+    {
+      "code": "0690225106542",
+      "sourceUrl": "https://images.openfoodfacts.org/images/products/069/022/510/6542/nutrition_en.14.400.jpg",
+      "result": "macros_match",
+      "note": "Five displayed macros agree with the per-100-g nutrition image. Its separate front image is mismatched and suppressed in the app."
+    }
+  ],
+  "license": "ODbL-1.0",
+  "sourceUrl": "https://world.openfoodfacts.org/data",
+  "limitations": [
+    "Community records are not independently verified labels. Numeric validation cannot detect every mismatched product, ingredient list or image.",
+    "India country tags do not establish present retail availability. This is not complete coverage of the Indian market.",
+    "Observation dates refer to the contributor record, not a package manufacture date. The latest source edit is not an export publication date.",
+    "Nutrition uses the declared per-100-g or per-100-ml basis. Mass and volume are never converted without density evidence.",
+    "Unknown nutrition remains null. Zero is kept only when explicitly provided by the source. Conflicting nutrition does not receive a protein-density ranking.",
+    "The 50 curated recipes retain publisher-stated serving estimates and are separate from the food-label dataset."
+  ]
+}

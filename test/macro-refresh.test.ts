@@ -12,7 +12,7 @@ const manifest = (source: string, sourceKind: SourceManifest["sourceKind"]): Sou
   sourceAuthority: { identity: 70, nutrition: 40, ingredients: 40 },
   sourceLicenseUrl: null,
   sourceRetentionNotes: "",
-  adapterVersion: sourceKind === "brand" ? "official-brand-sitemap-v19" : "off-bulk-v6",
+  adapterVersion: sourceKind === "brand" ? "official-brand-sitemap-v19" : "off-bulk-v8",
   input: source,
   inputHash: "a".repeat(64),
   inputBytes: 1,

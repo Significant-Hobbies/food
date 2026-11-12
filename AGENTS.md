@@ -7,7 +7,7 @@ remains incomplete or blocked.
 
 ## Project
 
-Protein Index is a normalized Indian protein-product intelligence database.
+Food (formerly Protein Index) is a normalized Indian protein-product intelligence database.
 Canonical GTIN products; separate marketed and nutrition-derived protein
 classification; source-aware nutrition, ingredients, offers, ratings; evidence-
 first comparisons with strict Trusted / Discovery boundaries.
@@ -17,7 +17,7 @@ first comparisons with strict Trusted / Discovery boundaries.
 - **Local dev:** `pnpm dev`
 - **Checks:** `pnpm check` (cf-typegen + typecheck + tests + build)
 - **Docs checks:** `pnpm docs:validate` (broken links + frontmatter)
-- **Deploy:** `pnpm run deploy` after the reviewed data publication, clean-main,
+- **Deploy:** `pnpm run deploy` uses wrangler.food.jsonc and the food Worker after reviewed data publication, clean-main,
   synced-remote, green-CI, and release-preflight gates pass. Deployment is
   manual; `main` is not an automatic production trigger.
 

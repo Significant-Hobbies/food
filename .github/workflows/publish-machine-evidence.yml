@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: protein-index-production-publication
+  group: food-production-publication
   cancel-in-progress: false
 
 jobs:
@@ -99,7 +99,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          pnpm exec wrangler d1 migrations list protein-index --remote | tee .data/machine-publication/migrations.txt
+          pnpm exec wrangler --config wrangler.food.jsonc d1 migrations list food --remote | tee .data/machine-publication/migrations.txt
           if grep -q "Migrations to be applied" .data/machine-publication/migrations.txt; then
             echo "::error::Machine-evidence publication refuses pending migrations."
             exit 1
@@ -120,7 +120,7 @@ jobs:
           if (!Array.isArray(accepted) || accepted.length === 0 || accepted.some((item) => !/^[a-z][a-z0-9_]{2,63}$/.test(item.sourceRecordId) || !/^[a-z][a-z0-9_]{2,63}$/.test(item.productId) || !/^[a-f0-9]{64}$/.test(item.sourceContentHash))) throw new Error('Machine release source binding is malformed');
           console.log(`SELECT id, product_id, content_hash FROM source_records WHERE id IN (${accepted.map((item) => quote(item.sourceRecordId)).join(',')});`);
           NODE
-          pnpm exec wrangler d1 execute protein-index --remote --yes --json --command "$(< .data/machine-publication/source-state.sql)" > .data/machine-publication/source-state.json
+          pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --json --command "$(< .data/machine-publication/source-state.sql)" > .data/machine-publication/source-state.json
           node --input-type=module <<'NODE'
           import { readFile } from 'node:fs/promises';
           const manifest = JSON.parse(await readFile(`${process.env.RELEASE_PATH}/manifest.json`, 'utf8'));
@@ -134,7 +134,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: pnpm exec wrangler d1 execute protein-index --remote --yes --file "$RELEASE_PATH/import.sql" 2>&1 | tee .data/machine-publication/publication.log
+        run: pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --file "$RELEASE_PATH/import.sql" 2>&1 | tee .data/machine-publication/publication.log
 
       - name: Prove database and live product postconditions
         shell: bash
@@ -149,7 +149,7 @@ jobs:
           const quote = (value) => `'${value.replaceAll("'", "''")}'`;
           console.log(`SELECT product_id, label_asset_id, basis, calories, protein_grams FROM current_machine_verified_nutrition_facts WHERE label_asset_id IN (${manifest.accepted.map((item) => quote(item.labelAssetId)).join(',')});`);
           NODE
-          pnpm exec wrangler d1 execute protein-index --remote --yes --json --command "$(< .data/machine-publication/post-state.sql)" > .data/machine-publication/post-state.json
+          pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --json --command "$(< .data/machine-publication/post-state.sql)" > .data/machine-publication/post-state.json
           node --input-type=module <<'NODE'
           import { readFile } from 'node:fs/promises';
           const manifest = JSON.parse(await readFile(`${process.env.RELEASE_PATH}/manifest.json`, 'utf8'));

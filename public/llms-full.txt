@@ -1,10 +1,10 @@
-# Protein Index — full agent brief
+# Food — full agent brief
 
 A searchable index of proteins.
 
 ## Index
 
-# Protein Index
+# Food
 
 Searchable protein index.
 
@@ -13,12 +13,12 @@ Searchable protein index.
 
 ## Machine surfaces
 
-- https://protein.significanthobbies.com/llms.txt
-- https://protein.significanthobbies.com/llms-full.txt
-- https://protein.significanthobbies.com/api/ai
-- https://protein.significanthobbies.com/index.md
-- https://protein.significanthobbies.com/sitemap.xml
-- https://protein.significanthobbies.com/robots.txt
+- https://food.significanthobbies.com/llms.txt
+- https://food.significanthobbies.com/llms-full.txt
+- https://food.significanthobbies.com/api/ai
+- https://food.significanthobbies.com/index.md
+- https://food.significanthobbies.com/sitemap.xml
+- https://food.significanthobbies.com/robots.txt
 
 ## Contact / fleet
 
