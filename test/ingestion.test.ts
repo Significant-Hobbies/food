@@ -2233,7 +2233,7 @@ describe("Open Food Facts bulk staging", () => {
     expect(workflow).not.toContain("PUBLICATION_EVIDENCE_DIR: ${{ runner.temp }}");
     expect(workflow).toContain("path: ${{ env.PUBLICATION_EVIDENCE_DIR }}/");
     expect(workflow).not.toContain("path: .data/publication-evidence/");
-    expect(workflow).toContain("group: protein-index-production-publication");
+    expect(workflow).toContain("group: food-production-publication");
     expect(workflow).toContain("cancel-in-progress: false");
     expect(workflow).toContain("environment: production");
     expect(workflow).toContain("--automatic");

@@ -52,7 +52,7 @@ assert canonical > 0, "Load the prepared snapshot before reporting canonical pro
 assert connection.execute("SELECT count(*) FROM source_records").fetchone()[0] == stage["stagedRecords"]
 quality = {
     **counts, "source": "Open Food Facts Parquet", "sourceUpdatedAt": source["latestProductModifiedAt"],
-    "importedAt": stage["completedAt"], "recordsRead": source["sourceRows"], "indiaRecords": stage["indiaRecords"],
+    "preparedAt": stage["completedAt"], "recordsRead": source["sourceRows"], "indiaRecords": stage["indiaRecords"],
     "stagedRecords": stage["stagedRecords"], "excludedRecords": stage["invalidRecords"] + stage["duplicateRecords"],
     "canonicalProducts": canonical, "duplicateBarcodes": stage["duplicateRecords"],
     "downloadPath": "/data/open-food-facts-india.jsonl.gz", "sourceSha256": source["sourceSha256"],

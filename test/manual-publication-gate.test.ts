@@ -185,7 +185,7 @@ describe("manual evidence publication workflow", () => {
     expect(workflow).toContain("PUBLISH_GUARDED_REVIEWED_LABELS_TO_PRODUCTION");
     expect(workflow).toContain("environment: production");
     expect(workflow).toContain("pnpm data:guarded-release:prepare");
-    expect(workflow).toContain("pnpm exec wrangler d1 execute protein-index --remote --yes --file .data/guarded-release/guarded.sql");
+    expect(workflow).toContain("pnpm exec wrangler --config wrangler.food.jsonc d1 execute food --remote --yes --file .data/guarded-release/guarded.sql");
     expect(workflow).toContain("Apply pending D1 migrations atomically");
     expect(workflow).toContain("INSERT INTO d1_migrations (name) VALUES");
     expect(workflow).toContain("Exact ${family} postcondition failed");

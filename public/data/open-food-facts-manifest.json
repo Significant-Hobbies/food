@@ -70,7 +70,7 @@
     "sourceErrors": 647,
     "source": "Open Food Facts Parquet",
     "sourceUpdatedAt": "2026-11-12T04:49:47+00:00",
-    "importedAt": "2026-11-12T13:55:16.220Z",
+    "preparedAt": "2026-11-12T13:55:16.220Z",
     "recordsRead": 4908827,
     "indiaRecords": 26101,
     "stagedRecords": 22794,

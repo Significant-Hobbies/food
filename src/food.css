@@ -139,7 +139,7 @@ tbody tr:hover { background: #fbfcfc; }
 .quality-table td:nth-child(2) { font-weight: 600; }
 .source-limits li { margin-bottom: 12px; }
 @media (max-width: 1100px) { .food-filters { grid-template-columns: minmax(200px, 1.5fr) repeat(3, minmax(120px, 1fr)); } .recipe-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); } .recipe-card { grid-template-columns: minmax(160px, 1.3fr) minmax(220px, 1fr); } .recipe-source { grid-column: 1; grid-row: 3; justify-self: start; } .recipe-card details { grid-column: 2; } }
-@media (max-width: 800px) {
+@media (max-width: 1000px) {
   .food-topbar { padding-inline: 20px; gap: 25px; } .food-family { display: none; } .food-topbar nav { gap: 22px; }
   .food-main, .food-footer { width: calc(100% - 40px); }
   .food-intro { gap: 20px; } .basis-key { display: none; }

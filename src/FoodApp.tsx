@@ -9,7 +9,7 @@ import type { CatalogResponse, ProductDetailResponse } from "../shared/api";
 type View = "foods" | "recipes" | "sources";
 type Filters = { q: string; category: string; scope: string; sort: string };
 type Quality = {
-  source: string; sourceUpdatedAt: string; importedAt: string;
+  source: string; sourceUpdatedAt: string; preparedAt: string;
   recordsRead: number; indiaRecords: number; stagedRecords: number; excludedRecords: number;
   canonicalProducts: number; usableNutrition: number; completeCoreMacros: number; withIngredients: number;
   nutritionConflicts: number; missingNutrition: number; withLabelImage: number;
@@ -44,13 +44,13 @@ function Sources() {
     {error && <div className="food-error" role="alert"><p>The quality report could not be loaded.</p><Button variant="outline" onClick={load}>Try again</Button></div>}
     {!quality && !error && <p role="status">Loading the snapshot report…</p>}
     {quality && <>
-      <dl className="source-meta"><div><dt>Food source</dt><dd><a href="https://world.openfoodfacts.org/data" target="_blank" rel="noreferrer">Open Food Facts bulk export</a></dd></div><div><dt>Latest source edit</dt><dd>{quality.sourceUpdatedAt.slice(0, 10)}</dd></div><div><dt>Imported</dt><dd>{quality.importedAt.slice(0, 10)}</dd></div><div><dt>Scope</dt><dd>Products tagged as sold in India</dd></div></dl>
+      <dl className="source-meta"><div><dt>Food source</dt><dd><a href="https://world.openfoodfacts.org/data" target="_blank" rel="noreferrer">Open Food Facts bulk export</a></dd></div><div><dt>Latest source edit</dt><dd>{quality.sourceUpdatedAt.slice(0, 10)}</dd></div><div><dt>Prepared snapshot</dt><dd>{quality.preparedAt.slice(0, 10)}</dd></div><div><dt>Scope</dt><dd>Products tagged as sold in India</dd></div></dl>
       <h2>What the snapshot contains</h2>
       <div className="table-wrap"><table className="quality-table"><thead><tr><th>Check</th><th>Records</th><th>What it means</th></tr></thead><tbody>{[
         ["Global rows in snapshot", quality.recordsRead, "The source Parquet metadata row count; all India-tagged rows were queried."],
         ["India-tagged source rows", quality.indiaRecords, "Country tags are contributor-provided; they do not prove current availability."],
         ["Accepted source records", quality.stagedRecords, "Named records retained with their original source and observations."],
-        ["Excluded source rows", quality.excludedRecords, "Missing identity or duplicate source records, with reasons retained."],
+        ["Excluded source rows", quality.excludedRecords, "Missing identity, obsolete or duplicate source records, with reasons retained."],
         ["Canonical products", quality.canonicalProducts, "GTIN matching deduplicates source records. Ambiguous identity is not silently merged."],
         ["Usable calories + protein", quality.usableNutrition, "Positive calories and protein present, after numeric conflict checks. Still unverified."],
         ["Five core macros present", quality.completeCoreMacros, "Calories, protein, carbohydrate, fat and fibre are recorded; quality is separate from completeness."],
