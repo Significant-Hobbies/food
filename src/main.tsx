@@ -11,4 +11,10 @@ async function mount() {
     : (await Promise.all([import("./FoodApp"), import("./food.css")]))[0].FoodApp;
   createRoot(root!).render(<StrictMode><App /></StrictMode>);
 }
-void mount();
+void mount().catch(() => {
+  root.textContent = "Food couldn’t load. ";
+  const retry = document.createElement("button");
+  retry.textContent = "Reload Food";
+  retry.onclick = () => window.location.reload();
+  root.append(retry);
+});

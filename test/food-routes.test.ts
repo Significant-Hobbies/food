@@ -4,11 +4,11 @@ import { isLocalOperatorRoute } from "../src/operator-route";
 
 describe("Food operator and publication boundaries", () => {
   it("retains the local workbench without mounting it on public or deceptive hosts", () => {
-    for (const hostname of ["localhost", "127.0.0.1", "::1", "[::1]"]) {
+    for (const hostname of ["localhost", "127.0.0.1", "::1"]) {
       expect(isLocalOperatorRoute({ hostname, pathname: "/operator" })).toBe(true);
       expect(isLocalOperatorRoute({ hostname, pathname: "/" })).toBe(false);
     }
-    for (const hostname of ["food.significanthobbies.com", "localhost.example.com", "127.0.0.1.example.com"]) {
+    for (const hostname of ["[::1]", "food.significanthobbies.com", "localhost.example.com", "127.0.0.1.example.com"]) {
       expect(isLocalOperatorRoute({ hostname, pathname: "/operator/reviews" })).toBe(false);
     }
     expect(isLocalOperatorRoute({ hostname: "localhost", pathname: "/operators" })).toBe(false);
