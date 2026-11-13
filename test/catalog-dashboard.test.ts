@@ -83,6 +83,14 @@ function renderCatalog(item: CatalogProduct): string {
 }
 
 describe("catalog comparison surface", () => {
+  it("offers accessible sort buttons for every visible comparison column", () => {
+    const data: CatalogResponse = { products: [product({ calories: 360, proteinGrams: 52 })], pagination: { page: 1, pageSize: 25, total: 1, pages: 1 }, trustedDefault: false, filters: {} };
+    const markup = renderToStaticMarkup(createElement(CatalogTable, { data, page: 1, onPage: () => {}, onOpen: () => {}, onExplore: () => {}, sort: "protein", order: "asc", onSort: () => {} }));
+    expect(markup.match(/class="column-sort"/g)).toHaveLength(7);
+    expect(markup).toContain('aria-sort="ascending"');
+    expect(markup).toContain('class="product-row"');
+  });
+
   it("shows the five comparison macros and protein density directly in the table and mobile card", () => {
     const markup = renderCatalog(product({ calories: 360, proteinGrams: 52 }));
 

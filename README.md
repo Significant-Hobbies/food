@@ -47,6 +47,10 @@ label-verified facts merely because they parse successfully.
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the source-data and
 service licenses that apply independently of this repository's visibility.
 
+## Comparing products
+
+Click a column heading to sort the entire catalog; click it again to reverse the order. The sort selector offers the same columns and directions on phones. Product rows and cards open source details. Macro sorts keep the declared per-100-g or per-100-ml basis; missing and conflicting values stay last in both directions. API clients use `sort=protein|carbs|fat|fibre|calories|protein_density|name|completeness` and `order=asc|desc`.
+
 ## Local development
 
 Requirements: Node.js 22+ and pnpm 10.

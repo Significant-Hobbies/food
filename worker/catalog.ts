@@ -1,4 +1,5 @@
 import type { CatalogProduct, CatalogResponse, NutritionEvidenceStatus, ProductDetailResponse } from "../shared/api";
+import { defaultSortOrder, isCatalogSort, type SortOrder } from "../shared/catalog-sort";
 import { normalizeText } from "../shared/gtin";
 import { calculateMetrics } from "../shared/metrics";
 import { hasNutritionErrors, validateNutrition } from "../shared/nutrition";
@@ -141,6 +142,7 @@ export interface SearchInput {
   scope: string;
   minCompleteness: number;
   sort: string;
+  order?: SortOrder;
   page: number;
   pageSize: number;
 }
@@ -161,6 +163,7 @@ export function validateSearch(input: URLSearchParams): { value?: SearchInput; e
     scope: input.get("scope") ?? "all",
     minCompleteness: number("minCompleteness", 0),
     sort: input.get("sort") ?? "protein_density",
+    order: (input.get("order") ?? defaultSortOrder(input.get("sort") ?? "protein_density")) as SortOrder,
     page: number("page", 1),
     pageSize: number("pageSize", 25),
   };
@@ -175,7 +178,8 @@ export function validateSearch(input: URLSearchParams): { value?: SearchInput; e
     return { error: "Invalid ingredient verification filter" };
   }
   if (!["all", "protein", "protein_branded"].includes(value.scope)) return { error: "Invalid scope" };
-  if (!["protein_density", "completeness", "name"].includes(value.sort)) return { error: "Invalid sort" };
+  if (!isCatalogSort(value.sort)) return { error: "Invalid sort" };
+  if (!["asc", "desc"].includes(value.order ?? "")) return { error: "Invalid sort order" };
   if (!Number.isInteger(value.page) || value.page < 1) return { error: "Page must be a positive integer" };
   if (!Number.isInteger(value.pageSize) || value.pageSize < 1 || value.pageSize > 100) return { error: "Page size must be between 1 and 100" };
   if (!Number.isInteger(value.minCompleteness) || value.minCompleteness < 0 || value.minCompleteness > 100) return { error: "Minimum completeness must be between 0 and 100" };
@@ -317,22 +321,28 @@ const INGREDIENT_JOINS = `
   LEFT JOIN current_verified_ingredient_statements verified_ingredients
     ON verified_ingredients.product_id = p.id`;
 
-function filterJoins(input: SearchInput): string {
-  return (input.verification !== "all" ? NUTRITION_JOINS : "")
+function filterJoins(input: SearchInput, sortingNutrition = false): string {
+  return (input.verification !== "all" || sortingNutrition ? NUTRITION_JOINS : "")
     + (input.ingredientVerification !== "all" ? INGREDIENT_JOINS : "");
 }
 
 export async function searchProducts(db: D1Database, input: SearchInput): Promise<CatalogResponse> {
   const filters = filtersFor(input);
-  const order = {
-    // Trigger-maintained denormalized key (migration 0022); the raw overlay
-    // expression must not return here — it forces ~4 probes per product.
-    protein_density: "p.sort_protein_density DESC, p.name_normalized",
-    completeness: "p.completeness DESC, p.name_normalized",
-    name: "p.name_normalized, p.brand_normalized",
-  }[input.sort] ?? "p.name_normalized";
+  const macroColumns: Record<string, string> = {
+    protein: "protein_grams", carbs: "carbohydrate_grams", fat: "fat_grams",
+    fibre: "fibre_grams", calories: "calories",
+  };
+  const column = Object.hasOwn(macroColumns, input.sort) ? macroColumns[input.sort] : undefined;
+  // Use the same field precedence as displayed facts, excluding conflicting raw
+  // candidates. Amounts retain their declared mass/volume basis; no conversion.
+  const key = column ? `COALESCE(verified_nutrition.${column}, machine_nutrition.${column},
+    CASE WHEN n.status IN ('unverified', 'verified') THEN n.${column} END)` : input.sort === "protein_density" ? "p.sort_protein_density"
+    : input.sort === "completeness" ? "p.completeness" : "p.name_normalized";
+  const direction = (input.order ?? defaultSortOrder(input.sort)) === "asc" ? "ASC" : "DESC";
+  const order = `${key} ${direction} NULLS LAST, p.name_normalized ASC, p.brand_normalized ASC, p.id ASC`;
+  const pageJoins = filterJoins(input, Boolean(column));
   const offset = (input.page - 1) * input.pageSize;
-  const pageIds = `SELECT p.id FROM products p${filterJoins(input)}${filters.sql} ORDER BY ${order} LIMIT ? OFFSET ?`;
+  const pageIds = `SELECT p.id FROM products p${pageJoins}${filters.sql} ORDER BY ${order} LIMIT ? OFFSET ?`;
   const list = db.prepare(`${SELECT_PRODUCT} WHERE p.id IN (${pageIds}) ORDER BY ${order}`)
     .bind(...filters.bindings, input.pageSize, offset);
   const count = filters.filtered
