@@ -45,7 +45,7 @@ function Sources() {
   useEffect(load, []);
   return <section className="sources-page">
     <h1>Know what’s behind the numbers.</h1>
-    <p className="lede">Community food records, visible gaps, and recipes with their original source. A successful import is not independent label verification.</p>
+    <p className="lede">Open Food Facts is the only source for packaged-food nutrition. Recipes use estimates from their original publishers. Source links, observation dates and data checks are available below.</p>
     {error && <div className="food-error" role="alert"><p>The quality report could not be loaded.</p><Button variant="outline" onClick={load}>Try again</Button></div>}
     {!quality && !error && <p role="status">Loading the snapshot report…</p>}
     {quality && <>
@@ -57,7 +57,7 @@ function Sources() {
         ["Accepted source records", quality.stagedRecords, "Named records retained with their original source and observations."],
         ["Excluded source rows", quality.excludedRecords, "Missing identity, obsolete or duplicate source records, with reasons retained."],
         ["Canonical products", quality.canonicalProducts, "GTIN matching deduplicates source records. Ambiguous identity is not silently merged."],
-        ["Usable calories + protein", quality.usableNutrition, "Positive calories and protein present, after numeric conflict checks. Still unverified."],
+        ["Usable calories + protein", quality.usableNutrition, "Positive calories and protein present, after numeric conflict checks."],
         ["Five core macros present", quality.completeCoreMacros, "Calories, protein, carbohydrate, fat and fibre are recorded; quality is separate from completeness."],
         ["Ingredient statements", quality.withIngredients, "Source-provided text, not an allergen guarantee."],
         ["Nutrition conflicts", quality.nutritionConflicts, "Failed numeric or source quality checks. Withheld from protein rankings."],
@@ -144,14 +144,14 @@ export function FoodApp() {
         <section className="food-ledger" aria-label="Food nutrition reference" aria-busy={loading}><div className="ledger-heading"><h2>Nutrition reference</h2><p role="status">{loading ? "Loading food records…" : error ? "Could not load records" : `${catalog?.pagination.total.toLocaleString("en-IN") ?? 0} ${catalog?.pagination.total === 1 ? "product" : "products"}`}</p></div>
           {error && <div className="food-error" role="alert"><p>{error}</p><Button variant="outline" onClick={() => setRetry((value) => value + 1)}>Try again</Button></div>}
           {loading && !catalog && <div className="food-loading" role="status">Loading the catalog…</div>}
-          {!error && catalog && <CatalogTable data={catalog} busy={loading} sort={displayedSort} order={displayedOrder} onSort={(sort) => changeFilters({ sort, order: nextSortOrder(displayedSort, displayedOrder, sort) })} onOpen={setSelected} onExplore={() => changeFilters({ q: "", category: "all", scope: "all" })} page={catalog.pagination.page} onPage={(next) => { setPage(next); document.querySelector(".food-ledger")?.scrollIntoView({ block: "start" }); }} />}
+          {!error && catalog && <CatalogTable showUnverifiedStatus={false} data={catalog} busy={loading} sort={displayedSort} order={displayedOrder} onSort={(sort) => changeFilters({ sort, order: nextSortOrder(displayedSort, displayedOrder, sort) })} onOpen={setSelected} onExplore={() => changeFilters({ q: "", category: "all", scope: "all" })} page={catalog.pagination.page} onPage={(next) => { setPage(next); document.querySelector(".food-ledger")?.scrollIntoView({ block: "start" }); }} />}
         </section>
-        <aside className="food-context"><strong>Read with context</strong><p>Open Food Facts is community-contributed. Values can be missing, stale or mismatched. Conflicting nutrition is withheld from protein rankings. Open a product to see its source and observation date. <a href="/sources" onClick={(event) => { event.preventDefault(); navigate("sources"); }}>See the data-quality report</a>.</p></aside>
+        <aside className="food-context"><strong>Packaged-food data: Open Food Facts</strong><p>Open a product to see its source and observation date. Missing and conflicting values are flagged. <a href="/sources" onClick={(event) => { event.preventDefault(); navigate("sources"); }}>See the data-quality report</a>.</p></aside>
       </>}
       {view === "recipes" && <Recipes />}
       {view === "sources" && <Sources />}
     </main>
     <footer className="food-footer"><span>Food by Significant Hobbies</span><span><a href="https://world.openfoodfacts.org" target="_blank" rel="noreferrer">Open Food Facts</a> · <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noreferrer">ODbL</a> · <a href="https://github.com/Significant-Hobbies/food">Source code</a></span></footer>
-    {selected && <ProductDrawer detail={detail} loading={detailLoading} error={detailError} onClose={() => setSelected(null)} />}
+    {selected && <ProductDrawer showUnverifiedStatus={false} detail={detail} loading={detailLoading} error={detailError} onClose={() => setSelected(null)} />}
   </div>;
 }
