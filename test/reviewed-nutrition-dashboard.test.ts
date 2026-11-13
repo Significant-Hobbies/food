@@ -1,4 +1,6 @@
-import { createElement } from "react";
+// @vitest-environment happy-dom
+import { createRoot } from "react-dom/client";
+import { act, createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReviewItem } from "../shared/api";
@@ -67,8 +69,9 @@ describe("reviewed nutrition dashboard", () => {
     const result = reviewedProjectionFromDraft(draft);
     expect(result.projection).toEqual({ basis: "per_100g", nutritionPer100g: { ...nutrition, sugarGrams: 4 } });
 
-    const markup = renderToStaticMarkup(createElement(NutritionCorrectionConfirmation, {
+    const markup = renderDialog(createElement(NutritionCorrectionConfirmation, {
       reviewId: "review-volume",
+      error: "The source changed; inspect it again.",
       candidate: volumeCandidate,
       projection: result.projection!,
       changes: nutritionFieldChanges(volumeCandidate, result.projection!),
@@ -81,6 +84,7 @@ describe("reviewed nutrition dashboard", () => {
     expect(markup).toContain("per 100 mL");
     expect(markup).toContain("per 100 g");
     expect(markup).toContain("Confirm corrected values");
+    expect(markup).toContain("The source changed; inspect it again.");
   });
 
   it("rejects missing required, negative, and physically inconsistent values", () => {
@@ -156,3 +160,15 @@ describe("review mutation request contract", () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({ reviewedProjection });
   });
 });
+
+function renderDialog(element: ReactElement): string {
+  (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  act(() => root.render(element));
+  const markup = document.body.innerHTML;
+  act(() => root.unmount());
+  container.remove();
+  return markup;
+}

@@ -1,7 +1,10 @@
-import { createElement } from "react";
+// @vitest-environment happy-dom
+import { ProductEvidence } from "../src/ProductDrawer";
+import { act, createElement } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
-import { ProductDrawer, CatalogTable, HeaderProductLookup, lookupDestination } from "../src/App";
+import { describe, expect, it, vi } from "vitest";
+import { CatalogTable, HeaderProductLookup, lookupDestination } from "../src/App";
 import type { CatalogProduct, CatalogResponse, ProductDetailResponse } from "../shared/api";
 import { calculateMetrics } from "../shared/metrics";
 
@@ -86,36 +89,36 @@ describe("catalog comparison surface", () => {
   it("offers accessible sort buttons for every visible comparison column", () => {
     const data: CatalogResponse = { products: [product({ calories: 360, proteinGrams: 52 })], pagination: { page: 1, pageSize: 25, total: 1, pages: 1 }, trustedDefault: false, filters: {} };
     const markup = renderToStaticMarkup(createElement(CatalogTable, { data, page: 1, onPage: () => {}, onOpen: () => {}, onExplore: () => {}, sort: "protein", order: "asc", onSort: () => {} }));
-    expect(markup.match(/class="column-sort"/g)).toHaveLength(7);
+    expect(markup.match(/aria-sort="/g)).toHaveLength(7);
     expect(markup).toContain('aria-sort="ascending"');
-    expect(markup).toContain('class="product-row"');
+    expect(markup).toMatch(/class="[^"]*product-row/);
   });
 
-  it("shows the five comparison macros and protein density directly in the table and mobile card", () => {
+  it("shows the five comparison macros and density in the active catalog layout", () => {
     const markup = renderCatalog(product({ calories: 360, proteinGrams: 52 }));
 
     expect(markup).toContain("Protein / 100 kcal");
     for (const label of ["Protein", "Carbs", "Fat", "Fibre", "Calories"]) expect(markup).toContain(label);
     expect(markup).toContain("52 g");
-    expect(markup.match(/360 kcal/g)).toHaveLength(2);
+    expect(markup.match(/360 kcal/g)).toHaveLength(1);
     expect(markup).not.toContain("Cost / 25 g");
     expect(markup).not.toContain("Current offer");
   });
 
-  it("keeps mobile cards macro-first without ingredient or evidence drill-down copy", () => {
+  it("does not mount a second hidden mobile catalog alongside the desktop layout", () => {
     const markup = renderCatalog(product({ calories: 360, proteinGrams: 52 }));
-    const mobile = markup.slice(markup.indexOf('class="catalog-mobile"'));
+    const mobile = markup;
 
-    expect(mobile).toContain("product-card-macros");
+    expect(mobile).not.toContain('class="catalog-mobile"');
     expect(mobile).not.toContain("Ingredients");
     expect(mobile).not.toContain("status-verified");
   });
 
-  it.each(["per_100g", "per_100ml"] as const)("shows the declared %s basis visibly on compact cards", (basis) => {
+  it.each(["per_100g", "per_100ml"] as const)("shows the declared %s basis visibly in the active catalog", (basis) => {
     const item = product({ calories: 360, proteinGrams: 52 });
     item.nutrition.basis = basis;
-    const mobile = renderCatalog(item).split('class="catalog-mobile"')[1];
-    expect(mobile).toContain(`<p class="product-card-basis">Macros per 100 ${basis === "per_100g" ? "g" : "ml"}</p>`);
+    const mobile = renderCatalog(item);
+    expect(mobile).toContain(`<small>per 100 ${basis === "per_100g" ? "g" : "ml"}</small>`);
   });
 
   it("labels machine nutrition as label-backed without presenting it as human-reviewed", () => {
@@ -142,7 +145,7 @@ describe("catalog comparison surface", () => {
     const markup = renderCatalog(product({ calories: null, proteinGrams: 52 }));
 
     expect(markup).toContain("Calories");
-    expect(markup).toContain("— kcal");
+    expect(markup).toContain(">—</strong>");
     expect(markup).not.toMatch(/>0 kcal</);
   });
 
@@ -179,7 +182,7 @@ function renderDetail(overrides: Partial<ProductDetailResponse> = {}): string {
     additives: [], nutrients: [], ratings: [], provenance: [], completenessMissing: [], openReviewCount: 0,
     ...overrides,
   };
-  return renderToStaticMarkup(createElement(ProductDrawer, { detail, loading: false, error: null, onClose: () => undefined }));
+  return renderToStaticMarkup(createElement(ProductEvidence, { detail }));
 }
 
 describe("product detail evidence", () => {
@@ -227,5 +230,39 @@ describe("detail source records", () => {
     expect(markup).not.toContain("javascript:");
     expect(markup).toContain("source link unavailable");
     expect(markup).toContain("observation date unavailable");
+  });
+});
+
+
+describe("responsive catalog mounting", () => {
+  it.each(["per_100g", "per_100ml"] as const)("keeps %s macros visible when switching between cards and table", async (basis) => {
+    let mobile = true;
+    let changed = () => {};
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    vi.stubGlobal("matchMedia", () => ({ matches: mobile, addEventListener: (_: string, callback: () => void) => { changed = callback; }, removeEventListener: () => {} }));
+    const item = product({ calories: 360, proteinGrams: 52 });
+    item.nutrition.basis = basis;
+    const data: CatalogResponse = { products: [item], pagination: { page: 1, pageSize: 25, total: 1, pages: 1 }, trustedDefault: false, filters: {} };
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(createElement(CatalogTable, { data, page: 1, onPage: () => {}, onOpen: () => {}, onExplore: () => {} })));
+      expect(container.querySelectorAll(".product-card")).toHaveLength(1);
+      expect(container.querySelector(".catalog-desktop")).toBeNull();
+      expect(container.querySelector(".product-card-basis")?.textContent).toBe(`Macros per 100 ${basis === "per_100g" ? "g" : "ml"}`);
+      const macros = container.querySelector(".product-card-macros")?.textContent;
+      for (const label of ["Protein", "Carbs", "Fat", "Fibre", "Calories"]) expect(macros).toContain(label);
+      expect(macros).toContain("52 g");
+      expect(macros).toContain("360 kcal");
+      mobile = false;
+      await act(async () => changed());
+      expect(container.querySelector(".catalog-mobile")).toBeNull();
+      expect(container.querySelectorAll(".table-wrap.catalog-desktop .product-row")).toHaveLength(1);
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+      vi.unstubAllGlobals();
+    }
   });
 });

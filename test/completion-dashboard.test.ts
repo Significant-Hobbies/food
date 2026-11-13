@@ -28,7 +28,7 @@ function renderInteractive(element: ReactElement): { container: HTMLDivElement; 
   const root = createRoot(container);
   act(() => root.render(element));
   mountedRoots.push({ root, container });
-  return { container, root };
+  return { container: document.body as HTMLDivElement, root };
 }
 
 function setControlValue(control: HTMLInputElement | HTMLTextAreaElement, value: string): void {
@@ -594,7 +594,7 @@ describe("completion outcome dashboard", () => {
     act(() => trigger?.click());
     const url = container.querySelector<HTMLInputElement>('.completion-decision-form input[type="url"]');
     const rationale = container.querySelector<HTMLTextAreaElement>(".completion-decision-form textarea");
-    const confirmed = container.querySelector<HTMLInputElement>('.completion-decision-form input[type="checkbox"]');
+    const confirmed = container.querySelector<HTMLInputElement>('.completion-decision-form [role="checkbox"]');
     const form = container.querySelector<HTMLFormElement>(".completion-decision-form");
     expect(url?.value).toBe("https://world.openfoodfacts.org/product/08900000000012");
     expect(rationale).not.toBeNull();
@@ -613,7 +613,7 @@ describe("completion outcome dashboard", () => {
     expect(container.querySelector('[role="alert"]')?.textContent).toContain("The source identity changed after this row loaded.");
     expect(url?.value).toBe("https://example.invalid/exact-current-label.jpg");
     expect(rationale?.value).toBe("Exact brand, flavour, and pack inspected");
-    expect(confirmed?.checked).toBe(true);
+    expect(confirmed?.getAttribute("aria-checked")).toBe("true");
     expect(container.querySelector('.completion-desktop button[aria-label^="Verify exact identity"]')).not.toBeNull();
   });
 
@@ -630,7 +630,7 @@ describe("completion outcome dashboard", () => {
     const trigger = container.querySelector<HTMLButtonElement>('.completion-desktop button[aria-label^="Verify exact identity"]');
     act(() => trigger?.click());
     const rationale = container.querySelector<HTMLTextAreaElement>(".completion-decision-form textarea");
-    const confirmed = container.querySelector<HTMLInputElement>('.completion-decision-form input[type="checkbox"]');
+    const confirmed = container.querySelector<HTMLInputElement>('.completion-decision-form [role="checkbox"]');
     const form = container.querySelector<HTMLFormElement>(".completion-decision-form");
     setControlValue(rationale!, "Exact current package identity");
     act(() => confirmed?.click());
@@ -657,7 +657,7 @@ describe("completion outcome dashboard", () => {
     const trigger = container.querySelector<HTMLButtonElement>('.completion-desktop button[aria-label^="Verify exact identity"]');
     act(() => trigger?.click());
     setControlValue(container.querySelector<HTMLTextAreaElement>(".completion-decision-form textarea")!, "Exact current package identity");
-    act(() => container.querySelector<HTMLInputElement>('.completion-decision-form input[type="checkbox"]')?.click());
+    act(() => container.querySelector<HTMLInputElement>('.completion-decision-form [role="checkbox"]')?.click());
     await submitForm(container.querySelector<HTMLFormElement>(".completion-decision-form")!);
 
     const alert = container.querySelector('[role="alert"].completion-commit-notice');
@@ -667,7 +667,11 @@ describe("completion outcome dashboard", () => {
     expect(container.querySelector('.completion-desktop button[aria-label^="Verify exact identity"]')).not.toBeNull();
   });
 
-  it("keeps keyboard focus inside the mobile dialog and restores its trigger after Escape", () => {
+  it("keeps keyboard focus inside the mobile dialog and restores its trigger after Escape", async () => {
+    const previousNotice = document.createElement("div");
+    previousNotice.className = "completion-commit-notice-success";
+    previousNotice.tabIndex = -1;
+    document.body.appendChild(previousNotice);
     const { container } = renderInteractive(createElement(IdentityWorklistHarness));
     const trigger = container.querySelector<HTMLButtonElement>('.completion-mobile button[aria-label^="Verify exact identity"]');
     expect(trigger).not.toBeNull();
@@ -684,21 +688,22 @@ describe("completion outcome dashboard", () => {
 
     act(() => {
       cancel?.focus();
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true }));
+      document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true }));
     });
     expect(document.activeElement).toBe(close);
     act(() => {
       close?.focus();
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true }));
+      document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true }));
     });
     expect(document.activeElement).toBe(cancel);
 
-    act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })));
+    act(() => document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })));
     expect(container.querySelector('[role="dialog"]')).toBeNull();
+    await flushEffects();
     expect(document.activeElement).toBe(trigger);
   });
 
-  it("restores focus to the worklist heading when a responsive switch hides the saved trigger", () => {
+  it("restores focus to the worklist heading when a responsive switch hides the saved trigger", async () => {
     const { container } = renderInteractive(createElement(IdentityWorklistHarness));
     const mobile = container.querySelector<HTMLElement>(".completion-mobile");
     const trigger = mobile?.querySelector<HTMLButtonElement>('button[aria-label^="Verify exact identity"]');
@@ -712,9 +717,10 @@ describe("completion outcome dashboard", () => {
     expect(container.querySelector('[role="dialog"]')).not.toBeNull();
 
     mobile!.style.display = "none";
-    act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })));
+    act(() => document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })));
 
     expect(container.querySelector('[role="dialog"]')).toBeNull();
+    await flushEffects();
     expect(document.activeElement).toBe(heading);
   });
 
@@ -777,9 +783,9 @@ describe("completion outcome dashboard", () => {
     }));
     await flushEffects();
 
-    const evidenceRadios = [...container.querySelectorAll<HTMLInputElement>('.completion-evidence-options input[type="radio"]')];
+    const evidenceRadios = [...container.querySelectorAll<HTMLInputElement>('.completion-evidence-options [role="radio"]')];
     expect(evidenceRadios).toHaveLength(2);
-    expect(evidenceRadios.every(({ checked }) => !checked)).toBe(true);
+    expect(evidenceRadios.every((radio) => radio.getAttribute("aria-checked") === "false")).toBe(true);
     expect(container.textContent).toContain("Not declared");
     expect(container.textContent).toContain("Not applicable");
     expect(container.textContent).toContain("Current sources disagree: not_applicable versus not_declared.");
@@ -810,10 +816,10 @@ describe("completion outcome dashboard", () => {
       onCancel: () => undefined,
     }));
     await flushEffects();
-    act(() => container.querySelector<HTMLInputElement>('input[value="label:label-asset-current"]')?.click());
-    act(() => container.querySelector<HTMLInputElement>('input[value="not_applicable"]')?.click());
+    act(() => container.querySelector<HTMLInputElement>('[role="radio"][value="label:label-asset-current"]')?.click());
+    act(() => container.querySelector<HTMLInputElement>('[role="radio"][value="not_applicable"]')?.click());
     setControlValue(container.querySelector<HTMLTextAreaElement>(".completion-decision-form textarea")!, "The exact retained panel explicitly marks nutrition as not applicable.");
-    act(() => container.querySelector<HTMLInputElement>('.completion-decision-confirm input[type="checkbox"]')?.click());
+    act(() => container.querySelector<HTMLInputElement>('.completion-decision-confirm [role="checkbox"]')?.click());
     await submitForm(container.querySelector<HTMLFormElement>(".completion-decision-form")!);
 
     expect(record).toHaveBeenCalledWith("product-exact-labels", expect.objectContaining({
@@ -856,18 +862,18 @@ describe("completion outcome dashboard", () => {
       onCancel: () => undefined,
     }));
     await flushEffects();
-    act(() => container.querySelector<HTMLInputElement>('input[value="label:label-asset-current"]')?.click());
+    act(() => container.querySelector<HTMLInputElement>('[role="radio"][value="label:label-asset-current"]')?.click());
     const rationale = container.querySelector<HTMLTextAreaElement>(".completion-decision-form textarea")!;
     setControlValue(rationale, "The full retained panel was inspected.");
-    act(() => container.querySelector<HTMLInputElement>('.completion-decision-confirm input[type="checkbox"]')?.click());
+    act(() => container.querySelector<HTMLInputElement>('.completion-decision-confirm [role="checkbox"]')?.click());
     await submitForm(container.querySelector<HTMLFormElement>(".completion-decision-form")!);
     await flushEffects();
 
     expect(list).toHaveBeenCalledTimes(2);
     expect(rationale.value).toBe("The full retained panel was inspected.");
-    expect(container.querySelector<HTMLInputElement>('input[value="label:label-asset-refreshed"]')).not.toBeNull();
-    expect([...container.querySelectorAll<HTMLInputElement>('.completion-evidence-options input[type="radio"]')].every(({ checked }) => !checked)).toBe(true);
-    expect(container.querySelector<HTMLInputElement>('.completion-decision-confirm input[type="checkbox"]')?.checked).toBe(false);
+    expect(container.querySelector<HTMLInputElement>('[role="radio"][value="label:label-asset-refreshed"]')).not.toBeNull();
+    expect([...container.querySelectorAll<HTMLInputElement>('.completion-evidence-options [role="radio"]')].every((radio) => radio.getAttribute("aria-checked") === "false")).toBe(true);
+    expect(container.querySelector<HTMLInputElement>('.completion-decision-confirm [role="checkbox"]')?.getAttribute("aria-checked")).toBe("false");
     const alert = container.querySelector<HTMLElement>('[role="alert"].completion-decision-error');
     expect(alert?.textContent).toContain("Current exact evidence is refreshed");
     expect(alert?.textContent).toContain("Your rationale was preserved");
@@ -880,10 +886,10 @@ describe("completion outcome dashboard", () => {
     const { container } = renderInteractive(createElement(TerminalWorklistHarness));
     act(() => container.querySelector<HTMLButtonElement>('.completion-desktop button[aria-label^="Record exact nutrition"]')?.click());
     await flushEffects();
-    act(() => container.querySelector<HTMLInputElement>('input[value="source:source-record-current"]')?.click());
+    act(() => container.querySelector<HTMLInputElement>('[role="radio"][value="source:source-record-current"]')?.click());
     const rationale = container.querySelector<HTMLTextAreaElement>(".completion-decision-form textarea")!;
     setControlValue(rationale, "The complete official record has no declaration.");
-    act(() => container.querySelector<HTMLInputElement>('.completion-decision-confirm input[type="checkbox"]')?.click());
+    act(() => container.querySelector<HTMLInputElement>('.completion-decision-confirm [role="checkbox"]')?.click());
     await submitForm(container.querySelector<HTMLFormElement>(".completion-decision-form")!);
 
     expect(record).toHaveBeenCalledWith("product-exact-labels", expect.objectContaining({
@@ -894,8 +900,8 @@ describe("completion outcome dashboard", () => {
     expect(container.querySelector('[role="dialog"]')).not.toBeNull();
     expect(container.querySelector('[role="alert"]')?.textContent).toContain("The decision could not be recorded.");
     expect(rationale.value).toBe("The complete official record has no declaration.");
-    expect(container.querySelector<HTMLInputElement>('input[value="source:source-record-current"]')?.checked).toBe(true);
-    expect(container.querySelector<HTMLInputElement>('.completion-decision-confirm input[type="checkbox"]')?.checked).toBe(true);
+    expect(container.querySelector<HTMLInputElement>('[role="radio"][value="source:source-record-current"]')?.getAttribute("aria-checked")).toBe("true");
+    expect(container.querySelector<HTMLInputElement>('.completion-decision-confirm [role="checkbox"]')?.getAttribute("aria-checked")).toBe("true");
     expect(container.querySelector('.completion-desktop button[aria-label^="Record exact nutrition"]')).not.toBeNull();
   });
 
@@ -910,9 +916,9 @@ describe("completion outcome dashboard", () => {
     const { container } = renderInteractive(createElement(TerminalWorklistHarness, { onRefresh }));
     act(() => container.querySelector<HTMLButtonElement>('.completion-desktop button[aria-label^="Record exact nutrition"]')?.click());
     await flushEffects();
-    act(() => container.querySelector<HTMLInputElement>('input[value="source:source-record-current"]')?.click());
+    act(() => container.querySelector<HTMLInputElement>('[role="radio"][value="source:source-record-current"]')?.click());
     setControlValue(container.querySelector<HTMLTextAreaElement>(".completion-decision-form textarea")!, "The complete official record has no declaration.");
-    act(() => container.querySelector<HTMLInputElement>('.completion-decision-confirm input[type="checkbox"]')?.click());
+    act(() => container.querySelector<HTMLInputElement>('.completion-decision-confirm [role="checkbox"]')?.click());
     await submitForm(container.querySelector<HTMLFormElement>(".completion-decision-form")!);
     await flushEffects();
 
@@ -921,6 +927,7 @@ describe("completion outcome dashboard", () => {
     expect(container.querySelector('.completion-desktop button[aria-label^="Record exact nutrition"]')).toBeNull();
     const status = container.querySelector<HTMLElement>('[role="status"].completion-commit-notice');
     expect(status?.textContent).toContain("Nutrition evidence decision saved");
+    await flushEffects();
     expect(document.activeElement).toBe(status);
   });
 
@@ -989,5 +996,88 @@ describe("completion outcome dashboard", () => {
       code: "stale_evidence",
       details: { evidenceId: "label:asset-one" },
     });
+  });
+});
+
+function redundantReview(): ReviewItem {
+  return {
+      id: "review-identity",
+      type: "nutrition_validation",
+      priority: 90,
+      status: "open",
+      productId: "incoming-product",
+      productName: "Incoming exact identity",
+      brand: "Evidence Foods",
+      sourceRecordId: "source-record-identity",
+      sourceUrl: "https://example.com/current-source",
+      candidateProductIds: ["canonical-product"],
+      candidates: [{
+        id: "canonical-product",
+        gtin: "08900000000012",
+        brand: "Evidence Foods",
+        name: "Canonical exact identity",
+        flavour: null,
+        netQuantityGrams: 1000,
+        category: "protein_powder",
+      }],
+      evidence: {},
+      selectedProjection: null,
+      redundantProjectionMatches: false,
+      redundantEligible: true,
+      createdAt: "2026-07-17T12:00:00.000Z",
+      decision: null,
+      rationale: null,
+      decisionEvidenceUrl: null,
+      decidedBy: null,
+    };
+}
+
+describe("shared modal review regressions", () => {
+  it("edits the rationale inside the redundant confirmation and keeps a failed save visible there", async () => {
+    const review = redundantReview();
+    const onResolve = vi.fn().mockRejectedValueOnce(new Error("An earlier dismiss failed.")).mockRejectedValue(new Error("The source changed; inspect it again."));
+    const data: ReviewResponse = { items: [review], counts: { open: 1, resolved: 0, dismissed: 0 }, pagination: { page: 1, pageSize: 50, total: 1, pages: 1 } };
+    renderInteractive(createElement(Reviews, { data, loading: false, error: null, onResolve, onOpenProduct: () => {}, typeFilter: "all", statusFilter: "open", page: 1, onType: () => {}, onStatus: () => {}, onPage: () => {} }));
+    const dismiss = [...document.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "Dismiss")!;
+    await act(async () => { dismiss.click(); await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(document.querySelector(".review-action-error")?.textContent).toContain("An earlier dismiss failed.");
+    const open = [...document.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "Record redundant evidence")!;
+    act(() => open.click());
+    await flushEffects();
+    const dialog = document.querySelector<HTMLElement>('[role="alertdialog"]')!;
+    expect(dialog.textContent).not.toContain("An earlier dismiss failed.");
+    const confirm = [...dialog.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "Confirm as redundant")!;
+    expect(confirm.disabled).toBe(true);
+    setControlValue(dialog.querySelector("textarea")!, "Exact matching source evidence");
+    expect(confirm.disabled).toBe(false);
+    await act(async () => { confirm.click(); await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(onResolve).toHaveBeenCalledWith(review, "redundant_nutrition", "Exact matching source evidence", null, null, null, null);
+    expect(dialog.querySelector('[role="alert"]')?.textContent).toContain("The source changed");
+    expect(document.querySelector('[role="alertdialog"]')).toBe(dialog);
+    expect(dialog.querySelector("textarea")?.value).toBe("Exact matching source evidence");
+  });
+
+  it("preserves an identity draft on outside clicks and blocks Escape while its save is pending", async () => {
+    let rejectSave: (error: Error) => void = () => {};
+    vi.spyOn(api, "verifyIdentityEvidence").mockImplementation(() => new Promise((_, reject) => { rejectSave = reject; }));
+    const { container } = renderInteractive(createElement(IdentityWorklistHarness));
+    const trigger = container.querySelector<HTMLButtonElement>('.completion-desktop button[aria-label^="Verify exact identity"]')!;
+    act(() => { trigger.focus(); trigger.click(); });
+    await flushEffects();
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+    const rationale = dialog.querySelector<HTMLTextAreaElement>("textarea")!;
+    setControlValue(rationale, "Keep this exact inspected rationale");
+    act(() => dialog.querySelector<HTMLButtonElement>('[role="checkbox"]')!.click());
+    const overlay = document.querySelector('[data-slot="dialog-overlay"]')!;
+    act(() => overlay.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerType: "mouse" })));
+    await flushEffects();
+    expect(document.querySelector('[role="dialog"]')).toBe(dialog);
+    expect(rationale.value).toBe("Keep this exact inspected rationale");
+    await submitForm(dialog.querySelector("form")!);
+    act(() => document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })));
+    expect(document.querySelector('[role="dialog"]')).toBe(dialog);
+    await act(async () => { rejectSave(new Error("The source is stale.")); await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(dialog.querySelector('[role="alert"]')?.textContent).toContain("The source is stale.");
+    expect(rationale.value).toBe("Keep this exact inspected rationale");
   });
 });

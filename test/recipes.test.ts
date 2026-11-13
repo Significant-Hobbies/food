@@ -33,7 +33,7 @@ describe("source-linked recipe collection", () => {
   });
   it("renders source links, serving bases, estimates and usable filters", () => {
     const html = renderToStaticMarkup(createElement(Recipes));
-    expect(html.match(/class="recipe-card"/g)).toHaveLength(50);
+    expect(html.match(/class="[^"]*\brecipe-card\b[^"]*"/g)).toHaveLength(50);
     expect(html).toContain("publisher estimates");
     expect(html).toContain("Read the original recipe");
     expect(html).toContain("recipe-india");
