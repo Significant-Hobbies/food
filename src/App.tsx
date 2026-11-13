@@ -512,12 +512,14 @@ export function NutritionCorrectionEditor({
   working,
   error,
   onSubmit,
+  onConfirmationOpen,
 }: {
   reviewId: string;
   candidate: ReviewNutritionCandidate;
   rationale: string;
   working: boolean;
   error?: string;
+  onConfirmationOpen?: () => void;
   onSubmit: (projection: ReviewedNutritionProjection) => Promise<boolean>;
 }) {
   const [draft, setDraft] = useState<NutritionReviewDraft>(() => nutritionDraftFromCandidate(candidate));
@@ -529,6 +531,7 @@ export function NutritionCorrectionEditor({
 
   const openConfirmation = () => {
     if (!result.projection || !hasChanges || rationale.trim().length < 3) return;
+    onConfirmationOpen?.();
     setConfirming(true);
   };
   const confirm = async () => {
@@ -744,7 +747,7 @@ export function Reviews({ data, loading, error, onResolve, onOpenProduct, typeFi
         return (
         <Card role="article" className={`review-card${candidate || ingredientCandidate ? " review-card-candidate" : ""}${item.decision === "redundant_nutrition" ? " review-card-redundant" : ""}`} key={item.id}>
           <header><span className="priority">P{item.priority}</span><div><h3>{item.productName ?? "Unmatched source record"}</h3><p>{item.brand ?? item.sourceRecordId} · {item.type.replaceAll("_", " ")}</p></div></header>
-          {candidate && <NutritionCandidateEvidence candidate={candidate} productName={item.productName} editor={!readOnly && item.status === "open" ? <NutritionCorrectionEditor reviewId={item.id} candidate={candidate} rationale={rationale} working={working === item.id} error={actionErrors[item.id]} onSubmit={(projection) => runAction(item.id, () => onResolve(item, "verify_nutrition", rationale, candidate.imageUrl, null, null, projection))} /> : null} />}
+          {candidate && <NutritionCandidateEvidence candidate={candidate} productName={item.productName} editor={!readOnly && item.status === "open" ? <NutritionCorrectionEditor reviewId={item.id} candidate={candidate} rationale={rationale} working={working === item.id} error={actionErrors[item.id]} onConfirmationOpen={() => setActionErrors((current) => ({ ...current, [item.id]: "" }))} onSubmit={(projection) => runAction(item.id, () => onResolve(item, "verify_nutrition", rationale, candidate.imageUrl, null, null, projection))} /> : null} />}
           {(item.redundantEligible || item.decision === "redundant_nutrition") && item.selectedProjection && <section className="redundant-match" aria-label={item.decision === "redundant_nutrition" ? "Recorded redundant nutrition evidence" : "Exact duplicate nutrition evidence available"}>
             <div><Badge variant="outline" className="redundant-badge">{item.decision === "redundant_nutrition" ? "Redundant evidence" : "Exact duplicate"}</Badge><h4>{item.decision === "redundant_nutrition" ? (item.redundantProjectionMatches ? "Recorded without changing verified nutrition" : "Recorded projection no longer matches") : "This label matches the selected projection"}</h4><p>{item.decision === "redundant_nutrition" ? (item.redundantProjectionMatches ? "The source-bound label was retained as terminal corroborating evidence. It did not create, replace, or re-verify a nutrition fact." : "The current selected projection has drifted. This historical decision must not be treated as current corroboration and reconciliation should return it to review.") : "All eight supported values and the physical basis match exactly. Recording redundancy will resolve only this evidence item."}</p></div>
             <SelectedProjection projection={item.selectedProjection} />
@@ -783,7 +786,7 @@ export function Reviews({ data, loading, error, onResolve, onOpenProduct, typeFi
           {actionErrors[item.id] && <Alert className="review-action-error" role="alert"><strong>Decision was not saved.</strong><span>{actionErrors[item.id]}</span></Alert>}
           <div className="review-actions">
             {item.type.includes("nutrition") || item.type === "coverage_gap" ? <><Button disabled={working === item.id} onClick={() => void runAction(item.id, () => onResolve(item, "verify_nutrition", rationale, evidenceUrl || null, null, null, null))}>{candidate ? "Verify exact label values" : "Verify nutrition"}</Button><Button variant="outline" className="secondary" disabled={working === item.id} onClick={() => void runAction(item.id, () => onResolve(item, "reject_nutrition", rationale, evidenceUrl || null, null, null, null))}>Reject candidate</Button></> : null}
-            {item.status === "open" && item.redundantEligible && confirmingRedundant !== item.id && <Button variant="outline" className="redundant" disabled={working === item.id} onClick={() => setConfirmingRedundant(item.id)} aria-haspopup="dialog">Record redundant evidence</Button>}
+            {item.status === "open" && item.redundantEligible && confirmingRedundant !== item.id && <Button variant="outline" className="redundant" disabled={working === item.id} onClick={() => { setActionErrors((current) => ({ ...current, [item.id]: "" })); setConfirmingRedundant(item.id); }} aria-haspopup="dialog">Record redundant evidence</Button>}
             {ingredientCandidate && <><Button disabled={working === item.id} onClick={() => void runAction(item.id, () => onResolve(item, "verify_ingredients", rationale, evidenceUrl || null, null, reviewedText, null))}>Verify reviewed label text</Button><Button variant="outline" className="secondary" disabled={working === item.id} onClick={() => void runAction(item.id, () => onResolve(item, "reject_ingredients", rationale, evidenceUrl || null, null, null, null))}>Reject this candidate</Button></>}
             {item.type === "identity" && <><Button disabled={working === item.id} onClick={() => void runAction(item.id, () => onResolve(item, "create_new", rationale, evidenceUrl || null, null, null, null))}>Create distinct product</Button><Button variant="outline" className="secondary" disabled={working === item.id} onClick={() => void runAction(item.id, () => onResolve(item, "no_match", rationale, null, null, null, null))}>Keep unmatched</Button></>}
             <Button variant="ghost" className="ghost" disabled={working === item.id} onClick={() => void runAction(item.id, () => onResolve(item, "dismiss", rationale, evidenceUrl || null, null, null, null))}>Dismiss</Button>
@@ -1675,7 +1678,7 @@ export function App() {
             <div className="result-meta" aria-live="polite"><span>{catalog?.pagination.total.toLocaleString("en-IN") ?? "—"} results</span><small>Missing values stay missing. Unverified values never enter trusted metrics.</small></div>
             {catalogState.loading && <Skeleton className="loading" role="status"><span className="loader" />Querying canonical catalog…</Skeleton>}
             {catalogState.error && <ErrorState title="Catalog unavailable" description={catalogState.error} onRetry={loadCatalog} />}
-            {catalog && !catalogState.loading && !catalogState.error && <CatalogTable data={catalog} onOpen={setSelectedId} onExplore={() => updateFilters({ ...initialFilters, scope: "all" })} page={page} onPage={setPage} />}
+            {catalog && !catalogState.loading && !catalogState.error && <CatalogTable data={catalog} onOpen={setSelectedId} onExplore={() => catalog.trustedDefault ? showDiscovery() : updateFilters({ ...initialFilters, scope: "all" })} page={page} onPage={setPage} />}
           </>
         )}
         {tab === "reviews" && <><section className="page-head"><p className="eyebrow">Human verification gate</p><h1>Evidence review queue</h1><p>{isPublic ? "Inspect unresolved evidence and decision history. Production decisions remain read-only until operator authentication is in place." : "Resolve conflicts without discarding the original source record."}</p></section>{reviewId && <div className="read-only-notice"><strong>Focused review</strong><span>Showing the exact ledger-linked evidence item.</span><Button variant="ghost" className="ghost" onClick={() => setReviewId(null)}>Return to full queue</Button></div>}<Reviews data={reviews} loading={reviewState.loading} error={reviewState.error} onResolve={resolve} onOpenProduct={setSelectedId} typeFilter={reviewType} statusFilter={reviewStatus} page={reviewPage} onType={(type) => { setReviewId(null); setReviewPage(1); setReviewType(type); }} onStatus={(status) => { setReviewId(null); setReviewPage(1); setReviewStatus(status); }} onPage={setReviewPage} readOnly={isPublic} /></>}

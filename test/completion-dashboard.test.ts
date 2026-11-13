@@ -1035,13 +1035,17 @@ function redundantReview(): ReviewItem {
 describe("shared modal review regressions", () => {
   it("edits the rationale inside the redundant confirmation and keeps a failed save visible there", async () => {
     const review = redundantReview();
-    const onResolve = vi.fn().mockRejectedValue(new Error("The source changed; inspect it again."));
+    const onResolve = vi.fn().mockRejectedValueOnce(new Error("An earlier dismiss failed.")).mockRejectedValue(new Error("The source changed; inspect it again."));
     const data: ReviewResponse = { items: [review], counts: { open: 1, resolved: 0, dismissed: 0 }, pagination: { page: 1, pageSize: 50, total: 1, pages: 1 } };
     renderInteractive(createElement(Reviews, { data, loading: false, error: null, onResolve, onOpenProduct: () => {}, typeFilter: "all", statusFilter: "open", page: 1, onType: () => {}, onStatus: () => {}, onPage: () => {} }));
+    const dismiss = [...document.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "Dismiss")!;
+    await act(async () => { dismiss.click(); await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(document.querySelector(".review-action-error")?.textContent).toContain("An earlier dismiss failed.");
     const open = [...document.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "Record redundant evidence")!;
     act(() => open.click());
     await flushEffects();
     const dialog = document.querySelector<HTMLElement>('[role="alertdialog"]')!;
+    expect(dialog.textContent).not.toContain("An earlier dismiss failed.");
     const confirm = [...dialog.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "Confirm as redundant")!;
     expect(confirm.disabled).toBe(true);
     setControlValue(dialog.querySelector("textarea")!, "Exact matching source evidence");

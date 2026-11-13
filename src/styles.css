@@ -681,7 +681,7 @@ footer button { min-height: 44px; padding: 0 10px; border: 0; background: transp
 
 .completion-mobile, .completion-card, .completion-card-product { min-width: 0; }
 
-.review-layout { min-width: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.review-layout { min-width: 0; }
 .review-layout > *, .queue-tools label { min-width: 0; }
 .candidate-detail { min-width: 0; flex: 1; flex-direction: column; align-items: flex-start; white-space: normal; height: auto; }
 @media (max-width: 1000px) { .review-layout { grid-template-columns: minmax(0, 1fr); } }
