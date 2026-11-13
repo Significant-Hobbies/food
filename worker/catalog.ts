@@ -1,4 +1,5 @@
 import type { CatalogProduct, CatalogResponse, NutritionEvidenceStatus, ProductDetailResponse } from "../shared/api";
+import { defaultSortOrder, isCatalogSort, type SortOrder } from "../shared/catalog-sort";
 import { normalizeText } from "../shared/gtin";
 import { calculateMetrics } from "../shared/metrics";
 import { hasNutritionErrors, validateNutrition } from "../shared/nutrition";
@@ -141,6 +142,7 @@ export interface SearchInput {
   scope: string;
   minCompleteness: number;
   sort: string;
+  order?: SortOrder;
   page: number;
   pageSize: number;
 }
@@ -161,6 +163,7 @@ export function validateSearch(input: URLSearchParams): { value?: SearchInput; e
     scope: input.get("scope") ?? "all",
     minCompleteness: number("minCompleteness", 0),
     sort: input.get("sort") ?? "protein_density",
+    order: (input.get("order") ?? defaultSortOrder(input.get("sort") ?? "protein_density")) as SortOrder,
     page: number("page", 1),
     pageSize: number("pageSize", 25),
   };
@@ -175,7 +178,8 @@ export function validateSearch(input: URLSearchParams): { value?: SearchInput; e
     return { error: "Invalid ingredient verification filter" };
   }
   if (!["all", "protein", "protein_branded"].includes(value.scope)) return { error: "Invalid scope" };
-  if (!["protein_density", "completeness", "name"].includes(value.sort)) return { error: "Invalid sort" };
+  if (!isCatalogSort(value.sort)) return { error: "Invalid sort" };
+  if (!["asc", "desc"].includes(value.order ?? "")) return { error: "Invalid sort order" };
   if (!Number.isInteger(value.page) || value.page < 1) return { error: "Page must be a positive integer" };
   if (!Number.isInteger(value.pageSize) || value.pageSize < 1 || value.pageSize > 100) return { error: "Page size must be between 1 and 100" };
   if (!Number.isInteger(value.minCompleteness) || value.minCompleteness < 0 || value.minCompleteness > 100) return { error: "Minimum completeness must be between 0 and 100" };
@@ -197,6 +201,24 @@ const NUTRITION_STATUS_SQL = `CASE
       WHEN n.status = 'verified' THEN 'unverified'
       ELSE n.status
     END`;
+
+// Several agreeing label assets can be current. Choose one complete projection
+// deterministically so they cannot duplicate products or consume page slots.
+const CURRENT_CATALOG_MACHINE_NUTRITION = `(SELECT * FROM (
+  SELECT candidate.*, ROW_NUMBER() OVER (
+    PARTITION BY product_id ORDER BY verified_at DESC, id DESC
+  ) AS catalog_rank FROM current_machine_verified_nutrition_facts candidate
+) WHERE catalog_rank = 1)`;
+
+const NUTRITION_BASIS_SQL = "COALESCE(verified_nutrition.basis, machine_nutrition.basis, n.basis)";
+
+// Optional fields may fall back only to facts with the displayed basis.
+// A per-serving or per-ml amount must never inherit another source's per-g label.
+function nutritionAmountSql(column: string, excludeConflicts = false): string {
+  return `COALESCE(verified_nutrition.${column},
+    CASE WHEN machine_nutrition.basis = ${NUTRITION_BASIS_SQL} THEN machine_nutrition.${column} END,
+    CASE WHEN n.basis = ${NUTRITION_BASIS_SQL}${excludeConflicts ? " AND n.status IN ('unverified', 'verified')" : ""} THEN n.${column} END)`;
+}
 
 const SELECT_PRODUCT = `
   SELECT p.id, p.gtin, p.image_url, p.nutrition_image_url, p.brand, p.name, p.flavour, p.category,
@@ -221,14 +243,14 @@ const SELECT_PRODUCT = `
     COALESCE(verified_ingredients.evidence_url, ingredient_terminal.evidence_url) AS ingredient_evidence_url,
     COALESCE(verified_ingredients.evidence_kind, ingredient_terminal_decision.evidence_kind) AS ingredient_evidence_kind,
     ingredient_terminal.outcome AS ingredient_terminal_outcome,
-    COALESCE(verified_nutrition.calories, machine_nutrition.calories, n.calories) AS calories,
-    COALESCE(verified_nutrition.protein_grams, machine_nutrition.protein_grams, n.protein_grams) AS protein_grams,
-    COALESCE(verified_nutrition.carbohydrate_grams, machine_nutrition.carbohydrate_grams, n.carbohydrate_grams) AS carbohydrate_grams,
-    COALESCE(verified_nutrition.sugar_grams, machine_nutrition.sugar_grams, n.sugar_grams) AS sugar_grams,
-    COALESCE(verified_nutrition.fat_grams, machine_nutrition.fat_grams, n.fat_grams) AS fat_grams,
-    COALESCE(verified_nutrition.saturated_fat_grams, machine_nutrition.saturated_fat_grams, n.saturated_fat_grams) AS saturated_fat_grams,
-    COALESCE(verified_nutrition.fibre_grams, machine_nutrition.fibre_grams, n.fibre_grams) AS fibre_grams,
-    COALESCE(verified_nutrition.sodium_mg, machine_nutrition.sodium_mg, n.sodium_mg) AS sodium_mg,
+    ${nutritionAmountSql("calories")} AS calories,
+    ${nutritionAmountSql("protein_grams")} AS protein_grams,
+    ${nutritionAmountSql("carbohydrate_grams")} AS carbohydrate_grams,
+    ${nutritionAmountSql("sugar_grams")} AS sugar_grams,
+    ${nutritionAmountSql("fat_grams")} AS fat_grams,
+    ${nutritionAmountSql("saturated_fat_grams")} AS saturated_fat_grams,
+    ${nutritionAmountSql("fibre_grams")} AS fibre_grams,
+    ${nutritionAmountSql("sodium_mg")} AS sodium_mg,
     COALESCE(verified_nutrition.basis, machine_nutrition.basis, n.basis) AS nutrition_basis,
     COALESCE(verified_nutrition.observed_at, machine_nutrition.verified_at, n.observed_at) AS nutrition_observed_at,
     COALESCE(verified_nutrition.label_verified_at, machine_nutrition.verified_at, n.label_verified_at) AS label_verified_at
@@ -239,7 +261,7 @@ const SELECT_PRODUCT = `
   LEFT JOIN ingredient_statements i ON i.product_id = p.id
   LEFT JOIN current_verified_nutrition_facts verified_nutrition
     ON verified_nutrition.product_id = p.id
-  LEFT JOIN current_machine_verified_nutrition_facts machine_nutrition
+  LEFT JOIN ${CURRENT_CATALOG_MACHINE_NUTRITION} machine_nutrition
     ON machine_nutrition.product_id = p.id
   LEFT JOIN current_verified_ingredient_statements verified_ingredients
     ON verified_ingredients.product_id = p.id
@@ -310,31 +332,48 @@ const NUTRITION_JOINS = `
   LEFT JOIN nutrition_facts n ON n.product_id = p.id
   LEFT JOIN current_verified_nutrition_facts verified_nutrition
     ON verified_nutrition.product_id = p.id
-  LEFT JOIN current_machine_verified_nutrition_facts machine_nutrition
+  LEFT JOIN ${CURRENT_CATALOG_MACHINE_NUTRITION} machine_nutrition
     ON machine_nutrition.product_id = p.id`;
 const INGREDIENT_JOINS = `
   LEFT JOIN ingredient_statements i ON i.product_id = p.id
   LEFT JOIN current_verified_ingredient_statements verified_ingredients
     ON verified_ingredients.product_id = p.id`;
 
-function filterJoins(input: SearchInput): string {
-  return (input.verification !== "all" ? NUTRITION_JOINS : "")
+function filterJoins(input: SearchInput, sortingNutrition = false): string {
+  return (input.verification !== "all" || sortingNutrition ? NUTRITION_JOINS : "")
     + (input.ingredientVerification !== "all" ? INGREDIENT_JOINS : "");
 }
 
-export async function searchProducts(db: D1Database, input: SearchInput): Promise<CatalogResponse> {
+export function catalogPageQuery(input: SearchInput) {
   const filters = filtersFor(input);
-  const order = {
-    // Trigger-maintained denormalized key (migration 0022); the raw overlay
-    // expression must not return here — it forces ~4 probes per product.
-    protein_density: "p.sort_protein_density DESC, p.name_normalized",
-    completeness: "p.completeness DESC, p.name_normalized",
-    name: "p.name_normalized, p.brand_normalized",
-  }[input.sort] ?? "p.name_normalized";
+  const macroColumns: Record<string, string> = {
+    protein: "protein_grams", carbs: "carbohydrate_grams", fat: "fat_grams",
+    fibre: "fibre_grams", calories: "calories",
+  };
+  const column = Object.hasOwn(macroColumns, input.sort) ? macroColumns[input.sort] : undefined;
+  // Use the same field precedence as displayed facts, excluding conflicting raw
+  // candidates. Amounts retain their declared mass/volume basis; no conversion.
+  const key = column ? `CASE WHEN ${NUTRITION_BASIS_SQL} IN ('per_100g', 'per_100ml')
+    THEN ${nutritionAmountSql(column, true)} END` : input.sort === "protein_density" ? "p.sort_protein_density"
+    : input.sort === "completeness" ? "p.completeness" : "p.name_normalized";
+  const direction = (input.order ?? defaultSortOrder(input.sort)) === "asc" ? "ASC" : "DESC";
+  // Keep the default browse orders aligned with their covering indexes. The
+  // final id makes page ties stable without introducing a full-catalog sort.
+  const order = column ? `${key} ${direction} NULLS LAST, p.name_normalized ASC, p.id ASC`
+    : input.sort === "protein_density" ? `${key} ${direction}${direction === "ASC" ? " NULLS LAST" : ""}, p.name_normalized ASC, p.completeness ASC, p.id ASC`
+    : input.sort === "completeness" ? `${key} ${direction}, p.name_normalized ASC, p.id ASC`
+    : `${key} ${direction}, p.brand_normalized ASC, p.completeness ASC, p.id ASC`;
+  const pageJoins = filterJoins(input, Boolean(column));
   const offset = (input.page - 1) * input.pageSize;
-  const pageIds = `SELECT p.id FROM products p${filterJoins(input)}${filters.sql} ORDER BY ${order} LIMIT ? OFFSET ?`;
-  const list = db.prepare(`${SELECT_PRODUCT} WHERE p.id IN (${pageIds}) ORDER BY ${order}`)
-    .bind(...filters.bindings, input.pageSize, offset);
+  const pageIds = `SELECT p.id FROM products p${pageJoins}${filters.sql} ORDER BY ${order} LIMIT ? OFFSET ?`;
+  return { sql: pageIds, order, bindings: [...filters.bindings, input.pageSize, offset], filters };
+}
+
+export async function searchProducts(db: D1Database, input: SearchInput): Promise<CatalogResponse> {
+  const page = catalogPageQuery(input);
+  const { filters } = page;
+  const list = db.prepare(`${SELECT_PRODUCT} WHERE p.id IN (${page.sql}) ORDER BY ${page.order}`)
+    .bind(...page.bindings);
   const count = filters.filtered
     ? db.prepare(`SELECT COUNT(*) AS total FROM products p${filterJoins(input)}${filters.sql}`)
       .bind(...filters.bindings)

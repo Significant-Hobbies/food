@@ -505,3 +505,7 @@ Owner requested completion with Open Food Facts, a recipes section, Food naming,
 The supplied Parquet contains 4,908,827 global records and 26,101 India-tagged rows. The prepared snapshot retains 22,794 source records, with 22,673 canonical products in local SQL. Quality accounting, exact source hashes, explicit exclusions, original observation dates, null/zero and mass/volume boundaries are retained. Two exact source-label mismatch candidates are conflicts, not verified corrections. The quality page records the limited spot-check scope.
 
 The public experience combines catalog search, nutrition comparison and product detail with 50 source-linked vegetarian recipes from 14 publishers. APIs, product HTML/Markdown, source downloads and sitemap retain agent access. Publication remains separate from producer workflows, with production mutations denied. Source, checks and current runtime evidence are tracked in GitHub issue #5.
+
+## 2026-11-13 · Comparison interactions
+
+The owner reported that comparison headings and rows were not clickable. Added globally paginated macro sorting in both directions, header controls with accessible sort state, the equivalent mobile selector, and row/card detail targets. Kept the India-only data scope; production D1 measured 304,377,856 bytes before this change. Missing/conflicting values are ordered last, with declared mass/volume bases preserved.

@@ -36,6 +36,7 @@ h1 { font-size: clamp(30px, 3.2vw, 42px); font-weight: 650; line-height: 1.15; l
 .food-filters { display: grid; grid-template-columns: minmax(250px, 2.3fr) repeat(3, minmax(150px, 1fr)); gap: 10px; margin-bottom: 22px; }
 .food-search input, select, .recipe-filters input { min-height: 48px; height: 48px; background: white; border: 1px solid var(--border); border-radius: 7px; padding: 10px 14px; box-shadow: none; color: var(--foreground); font-size: 14px; }
 select { width: 100%; }
+.food-sort-note { margin: -10px 0 18px; color: var(--muted-foreground); font-size: 11px; }
 .food-ledger { border: 1px solid var(--border); background: white; scroll-margin-top: 20px; }
 .ledger-heading { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--surface); border-bottom: 1px solid var(--border); }
 .ledger-heading h2, .ledger-heading p { margin: 0; font-size: 12px; }
@@ -51,6 +52,13 @@ td small { display: block; font-size: 10px; color: var(--muted-foreground); marg
 tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover { background: #fbfcfc; }
 .catalog-desktop th:first-child { width: 40%; }
+.column-sort { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px; padding: 6px 0; border: 0; background: transparent; color: inherit; text-align: left; font-size: inherit; }
+.column-sort span { color: #7b8992; }
+.column-sort:hover, th[aria-sort="ascending"] .column-sort, th[aria-sort="descending"] .column-sort { color: var(--brand-ink); }
+.catalog-desktop thead th { padding-block: 5px; }
+.product-row, .product-card { cursor: pointer; }
+.product-row:focus-within { background: #fff8ec; }
+.food-ledger[aria-busy="true"] tbody, .food-ledger[aria-busy="true"] .catalog-mobile { opacity: .5; }
 .product-identity { display: flex; gap: 16px; align-items: center; min-width: 240px; }
 .product-visual { width: 42px; height: 62px; flex: 0 0 42px; display: grid; grid-template-rows: minmax(0, 1fr); place-items: center; overflow: hidden; color: #62717c; background: #f6f7f8; font-size: 13px; }
 .product-visual img { width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: contain; }

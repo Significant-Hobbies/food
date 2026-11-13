@@ -62,5 +62,42 @@ describe("machine-verified nutrition evidence", () => {
       .bind(subject.source_record_id, subject.content_hash, subject.product_id, hash("9")).run();
     const stale = await json<CatalogResponse>(await worker.fetch("http://localhost/api/products?scope=all&verification=unverified&pageSize=100"));
     expect(stale.products.find(({ id }) => id === subject.product_id)?.nutritionStatus).toBe("unverified");
+
+    await env.DB.prepare("UPDATE nutrition_facts SET basis = 'per_serving', carbohydrate_grams = 99 WHERE product_id = ?").bind(subject.product_id).run();
+
+    // Distinct current labels can agree on protein/calories while supplying different macros.
+    for (const [suffix, carbs, date] of [["2", null, "2026-07-20"], ["3", 40, "2026-07-21"]] as const) {
+      await env.DB.prepare(`INSERT INTO label_evidence_assets
+        (id, subject_source_record_id, subject_source_content_hash, product_id, field_family, source_image_id,
+         source_image_revision, requested_url, effective_url, content_sha256, byte_length, media_type, fetched_at)
+        VALUES (?, ?, ?, ?, 'nutrition', ?, '1',
+          'https://images.openfoodfacts.org/agree.jpg', 'https://images.openfoodfacts.org/agree.jpg',
+          ?, 1024, 'image/jpeg', ?)`)
+        .bind(`agree-label-${suffix}`, subject.source_record_id, subject.content_hash, subject.product_id,
+          `agree-image-${suffix}`, hash(suffix), `${date}T00:00:00.000Z`).run();
+      await env.DB.prepare(`INSERT INTO machine_nutrition_verifications
+        (id, product_id, subject_source_record_id, subject_source_content_hash, label_asset_id, label_content_sha256,
+         source_image_revision, basis, calories, protein_grams, carbohydrate_grams, ocr_engine, ocr_version, ocr_output_sha256,
+         model_id, model_digest, model_output_sha256, prompt_sha256, normalizer_version,
+         normalized_result_sha256, validator_version, validation_report_sha256, release_manifest_sha256, verified_at)
+        SELECT ?, product_id, subject_source_record_id, subject_source_content_hash, ?, ?,
+          '1', basis, calories, protein_grams, ?, ocr_engine, ocr_version, ocr_output_sha256,
+          model_id, model_digest, model_output_sha256, prompt_sha256, normalizer_version,
+          ?, validator_version, validation_report_sha256, release_manifest_sha256, ?
+        FROM machine_nutrition_verifications WHERE id = 'machine-api'`)
+        .bind(`agree-verification-${suffix}`, `agree-label-${suffix}`, hash(suffix), carbs,
+          hash(suffix), `${date}T00:00:00.000Z`).run();
+      if (suffix === "2") {
+        const mixed = await json<CatalogResponse>(await worker.fetch("http://localhost/api/products?verification=machine_verified&scope=all&sort=carbs&order=desc"));
+        expect(mixed.products[0]).toMatchObject({ id: subject.product_id, nutrition: { basis: "per_100g", carbohydrateGrams: null } });
+      }
+    }
+    const agreeing = await json<CatalogResponse>(await worker.fetch("http://localhost/api/products?verification=machine_verified&scope=all&sort=carbs&order=desc&pageSize=1"));
+    expect(agreeing.pagination.total).toBe(1);
+    expect(agreeing.products).toHaveLength(1);
+    expect(agreeing.products[0]).toMatchObject({ id: subject.product_id, nutrition: { carbohydrateGrams: 40 } });
+    const nextPage = await json<CatalogResponse>(await worker.fetch("http://localhost/api/products?verification=machine_verified&scope=all&sort=carbs&order=desc&pageSize=1&page=2"));
+    expect(nextPage.products).toHaveLength(0);
+
   });
 });

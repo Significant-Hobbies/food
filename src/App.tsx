@@ -31,6 +31,7 @@ import type {
 import { validateNutrition } from "../shared/nutrition";
 import type { EvidenceStatus, MetricResult, NormalizedIngredient, NutritionPer100g } from "../shared/types";
 import { api, TerminalEvidenceRequestError } from "./api";
+import type { CatalogSort, SortOrder } from "../shared/catalog-sort";
 import imageExceptions from "../data/image-quality-exceptions.json";
 
 type Tab = "catalog" | "reviews" | "coverage";
@@ -353,8 +354,12 @@ function ClassificationBadges({ product }: { product: CatalogProduct }) {
   );
 }
 
-export function CatalogTable({ data, onOpen, onExplore, page, onPage }: {
+export function CatalogTable({ data, onOpen, onExplore, page, onPage, sort, order = "desc", onSort, busy = false }: {
   data: CatalogResponse;
+  busy?: boolean;
+  sort?: CatalogSort;
+  order?: SortOrder;
+  onSort?: (sort: CatalogSort) => void;
   onOpen: (id: string) => void;
   onExplore: () => void;
   page: number;
@@ -376,18 +381,14 @@ export function CatalogTable({ data, onOpen, onExplore, page, onPage }: {
         <table>
         <thead>
           <tr>
-            <th scope="col">Product</th>
-            <th scope="col">Protein / 100 kcal</th>
-            <th scope="col">Protein</th>
-            <th scope="col">Carbs</th>
-            <th scope="col">Fat</th>
-            <th scope="col">Fibre</th>
-            <th scope="col">Calories</th>
+            {([["name", "Product"], ["protein_density", "Protein / 100 kcal"], ["protein", "Protein"], ["carbs", "Carbs"], ["fat", "Fat"], ["fibre", "Fibre"], ["calories", "Calories"]] as const).map(([key, label]) => <th key={key} scope="col" aria-sort={onSort ? sort === key ? order === "asc" ? "ascending" : "descending" : "none" : undefined}>
+              {onSort ? <button className="column-sort" onClick={() => onSort(key)}>{label}<span aria-hidden="true">{sort === key ? order === "asc" ? "↑" : "↓" : "↕"}</span></button> : label}
+            </th> )}
           </tr>
         </thead>
-        <tbody>
+        <tbody inert={busy}>
           {data.products.map((product) => (
-            <tr key={product.id}>
+            <tr key={product.id} className="product-row" onClick={(event) => { if ((event.target as HTMLElement).closest("button, a") || window.getSelection()?.toString()) return; event.currentTarget.querySelector<HTMLButtonElement>("button")?.focus(); onOpen(product.id); }}>
               <td className="product-cell">
                 <div className="product-identity"><ProductVisual product={product} /><div><button className="product-link" onClick={() => onOpen(product.id)}><strong>{product.name}</strong><span>{product.brand}{product.flavour ? ` · ${product.flavour}` : ""}</span></button><ClassificationBadges product={product} /></div></div>
               </td>
@@ -402,9 +403,9 @@ export function CatalogTable({ data, onOpen, onExplore, page, onPage }: {
         </tbody>
         </table>
       </div>
-      <div className="catalog-mobile" aria-label="Catalog products">
+      <div className="catalog-mobile" aria-label="Catalog products" inert={busy}>
         {data.products.map((product) => (
-          <article className="product-card" key={product.id}>
+          <article className="product-card" key={product.id} onClick={(event) => { if ((event.target as HTMLElement).closest("button, a") || window.getSelection()?.toString()) return; event.currentTarget.querySelector<HTMLButtonElement>("button")?.focus(); onOpen(product.id); }}>
             <button className="product-card-main" onClick={() => onOpen(product.id)}>
               <ProductVisual product={product} />
               <span className="product-card-copy"><small>{product.brand}</small><strong>{product.name}</strong><em>{product.flavour ?? product.category.replaceAll("_", " ")}</em></span>
@@ -418,7 +419,7 @@ export function CatalogTable({ data, onOpen, onExplore, page, onPage }: {
           </article>
         ))}
       </div>
-      {data.pagination.pages > 1 && <nav className="pagination" aria-label="Catalog pages"><button disabled={page <= 1} onClick={() => onPage(page - 1)}>← Previous</button><span>Page <strong>{page}</strong> of {data.pagination.pages.toLocaleString("en-IN")}</span><button disabled={page >= data.pagination.pages} onClick={() => onPage(page + 1)}>Next →</button></nav>}
+      {data.pagination.pages > 1 && <nav className="pagination" aria-label="Catalog pages"><button disabled={busy || page <= 1} onClick={() => onPage(page - 1)}>← Previous</button><span>Page <strong>{page}</strong> of {data.pagination.pages.toLocaleString("en-IN")}</span><button disabled={busy || page >= data.pagination.pages} onClick={() => onPage(page + 1)}>Next →</button></nav>}
     </>
   );
 }

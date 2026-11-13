@@ -3,11 +3,12 @@ import { Button } from "@saas-maker/ui/atoms/button";
 import { Input } from "@saas-maker/ui/atoms/input";
 import { CatalogTable, ProductDrawer } from "./App";
 import { api } from "./api";
+import { CATALOG_SORTS, defaultSortOrder, isCatalogSort, nextSortOrder, type CatalogSort, type SortOrder } from "../shared/catalog-sort";
 import { Recipes } from "./Recipes";
 import type { CatalogResponse, ProductDetailResponse } from "../shared/api";
 
 type View = "foods" | "recipes" | "sources";
-type Filters = { q: string; category: string; scope: string; sort: string };
+type Filters = { q: string; category: string; scope: string; sort: CatalogSort; order: SortOrder };
 type Quality = {
   source: string; sourceUpdatedAt: string; preparedAt: string;
   recordsRead: number; indiaRecords: number; stagedRecords: number; excludedRecords: number;
@@ -24,7 +25,11 @@ function currentView(): View {
 
 function readFilters(): Filters {
   const query = new URLSearchParams(window.location.search);
-  return { q: query.get("q") ?? "", category: query.get("category") ?? "all", scope: query.get("scope") ?? "all", sort: query.get("sort") ?? "protein_density" };
+  const rawSort = query.get("sort") ?? "protein_density";
+  const sort = isCatalogSort(rawSort) ? rawSort : "protein_density";
+  const rawOrder = query.get("order");
+  const order = rawOrder === "asc" || rawOrder === "desc" ? rawOrder : defaultSortOrder(sort);
+  return { q: query.get("q") ?? "", category: query.get("category") ?? "all", scope: query.get("scope") ?? "all", sort, order };
 }
 
 function Sources() {
@@ -109,18 +114,20 @@ export function FoodApp() {
     const controller = new AbortController();
     setLoading(true); setError(null);
     const params = new URLSearchParams({ ...filters, q: query, trust: "all", verification: "all", ingredientVerification: "all", page: String(page), pageSize: "25" });
-    api.catalog(params, controller.signal).then((result) => { setCatalog(result); setLoading(false); })
+    api.catalog(params, controller.signal).then((result) => { if (controller.signal.aborted) return; setCatalog(result); setLoading(false); })
       .catch((reason: unknown) => { if (controller.signal.aborted) return; setError(reason instanceof Error ? reason.message : "Food data could not be loaded."); setLoading(false); });
     return () => controller.abort();
-  }, [query, filters.category, filters.scope, filters.sort, page, retry, view]);
+  }, [query, filters.category, filters.scope, filters.sort, filters.order, page, retry, view]);
   useEffect(() => {
     if (!selected) { setDetail(null); return; }
     const controller = new AbortController();
     setDetail(null); setDetailError(null); setDetailLoading(true);
-    api.product(selected, controller.signal).then((value) => { setDetail(value); setDetailLoading(false); })
+    api.product(selected, controller.signal).then((value) => { if (controller.signal.aborted) return; setDetail(value); setDetailLoading(false); })
       .catch((reason: unknown) => { if (controller.signal.aborted) return; setDetailError(reason instanceof Error ? reason.message : "Product could not be loaded."); setDetailLoading(false); });
     return () => controller.abort();
   }, [selected]);
+  const displayedSort = isCatalogSort(String(catalog?.filters.sort)) ? catalog!.filters.sort as CatalogSort : filters.sort;
+  const displayedOrder = catalog?.filters.order === "asc" ? "asc" : "desc";
   return <div className="food-app">
     <a className="skip-link" href="#main">Skip to content</a>
     <header className="food-topbar"><a className="food-wordmark" href="/" onClick={(event) => { event.preventDefault(); navigate("foods"); }}>Food /</a><nav aria-label="Main navigation">{(["foods", "recipes", "sources"] as const).map((item) => <a key={item} href={item === "foods" ? "/" : `/${item}`} aria-current={view === item ? "page" : undefined} onClick={(event) => { if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); navigate(item); }}>{item === "foods" ? "Foods" : item === "recipes" ? "Recipes" : "Data & sources"}</a>)}</nav><a className="food-family" href="https://significanthobbies.com">Significant Hobbies</a></header>
@@ -131,12 +138,13 @@ export function FoodApp() {
           <label className="food-search" htmlFor="food-search"><span className="sr-only">Search foods, brands or barcodes</span><Input id="food-search" type="search" value={filters.q} onChange={(event) => changeFilters({ q: event.target.value })} placeholder="Search a food, brand or barcode" /></label>
           <label htmlFor="food-category"><span className="sr-only">Category</span><select id="food-category" value={filters.category} onChange={(event) => changeFilters({ category: event.target.value })}><option value="all">All categories</option>{Object.entries({ protein_powder: "Protein powders", protein_bar: "Protein bars", protein_snack: "Protein snacks", soy_product: "Soy & tofu", dairy: "Dairy", plant_dairy: "Plant dairy", ready_to_drink: "Drinks", breakfast: "Breakfast", spread: "Spreads", other: "Other foods" }).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
           <label htmlFor="food-scope"><span className="sr-only">Food scope</span><select id="food-scope" value={filters.scope} onChange={(event) => changeFilters({ scope: event.target.value })}><option value="all">All foods</option><option value="protein">Protein foods</option><option value="protein_branded">Protein-branded foods</option></select></label>
-          <label htmlFor="food-sort"><span className="sr-only">Sort foods</span><select id="food-sort" value={filters.sort} onChange={(event) => changeFilters({ sort: event.target.value })}><option value="protein_density">Protein / 100 kcal</option><option value="name">Product name</option><option value="completeness">Most complete records</option></select></label>
+          <label htmlFor="food-sort"><span className="sr-only">Sort foods</span><select id="food-sort" aria-label="Sort foods" value={`${filters.sort}:${filters.order}`} onChange={(event) => { const [sort, order] = event.target.value.split(":"); if (sort && isCatalogSort(sort) && (order === "asc" || order === "desc")) changeFilters({ sort, order }); }}>{CATALOG_SORTS.map((sort) => <optgroup key={sort.key} label={sort.label}>{(["desc", "asc"] as const).map((order) => <option key={order} value={`${sort.key}:${order}`}>{sort.label} · {sort.key === "name" ? order === "asc" ? "A–Z" : "Z–A" : order === "asc" ? "low to high" : "high to low"}</option>)}</optgroup>)}</select></label>
         </form>
-        <section className="food-ledger" aria-label="Food nutrition reference" aria-busy={loading}><div className="ledger-heading"><h2>Nutrition reference</h2><p role="status">{loading ? "Loading food records…" : error ? "Could not load records" : `${catalog?.pagination.total.toLocaleString("en-IN") ?? 0} products`}</p></div>
+        <p className="food-sort-note">Sorts cover all results. Missing, conflicting or non-comparable amounts stay last.</p>
+        <section className="food-ledger" aria-label="Food nutrition reference" aria-busy={loading}><div className="ledger-heading"><h2>Nutrition reference</h2><p role="status">{loading ? "Loading food records…" : error ? "Could not load records" : `${catalog?.pagination.total.toLocaleString("en-IN") ?? 0} ${catalog?.pagination.total === 1 ? "product" : "products"}`}</p></div>
           {error && <div className="food-error" role="alert"><p>{error}</p><Button variant="outline" onClick={() => setRetry((value) => value + 1)}>Try again</Button></div>}
-          {loading && <div className="food-loading" role="status">Loading the catalog…</div>}
-          {!loading && !error && catalog && <CatalogTable data={catalog} onOpen={setSelected} onExplore={() => changeFilters({ q: "", category: "all", scope: "all" })} page={page} onPage={(next) => { setPage(next); document.querySelector(".food-ledger")?.scrollIntoView({ block: "start" }); }} />}
+          {loading && !catalog && <div className="food-loading" role="status">Loading the catalog…</div>}
+          {!error && catalog && <CatalogTable data={catalog} busy={loading} sort={displayedSort} order={displayedOrder} onSort={(sort) => changeFilters({ sort, order: nextSortOrder(displayedSort, displayedOrder, sort) })} onOpen={setSelected} onExplore={() => changeFilters({ q: "", category: "all", scope: "all" })} page={catalog.pagination.page} onPage={(next) => { setPage(next); document.querySelector(".food-ledger")?.scrollIntoView({ block: "start" }); }} />}
         </section>
         <aside className="food-context"><strong>Read with context</strong><p>Open Food Facts is community-contributed. Values can be missing, stale or mismatched. Conflicting nutrition is withheld from protein rankings. Open a product to see its source and observation date. <a href="/sources" onClick={(event) => { event.preventDefault(); navigate("sources"); }}>See the data-quality report</a>.</p></aside>
       </>}
