@@ -86,36 +86,36 @@ describe("catalog comparison surface", () => {
   it("offers accessible sort buttons for every visible comparison column", () => {
     const data: CatalogResponse = { products: [product({ calories: 360, proteinGrams: 52 })], pagination: { page: 1, pageSize: 25, total: 1, pages: 1 }, trustedDefault: false, filters: {} };
     const markup = renderToStaticMarkup(createElement(CatalogTable, { data, page: 1, onPage: () => {}, onOpen: () => {}, onExplore: () => {}, sort: "protein", order: "asc", onSort: () => {} }));
-    expect(markup.match(/class="column-sort"/g)).toHaveLength(7);
+    expect(markup.match(/aria-sort="/g)).toHaveLength(7);
     expect(markup).toContain('aria-sort="ascending"');
-    expect(markup).toContain('class="product-row"');
+    expect(markup).toMatch(/class="[^"]*product-row/);
   });
 
-  it("shows the five comparison macros and protein density directly in the table and mobile card", () => {
+  it("shows the five comparison macros and density in the active catalog layout", () => {
     const markup = renderCatalog(product({ calories: 360, proteinGrams: 52 }));
 
     expect(markup).toContain("Protein / 100 kcal");
     for (const label of ["Protein", "Carbs", "Fat", "Fibre", "Calories"]) expect(markup).toContain(label);
     expect(markup).toContain("52 g");
-    expect(markup.match(/360 kcal/g)).toHaveLength(2);
+    expect(markup.match(/360 kcal/g)).toHaveLength(1);
     expect(markup).not.toContain("Cost / 25 g");
     expect(markup).not.toContain("Current offer");
   });
 
-  it("keeps mobile cards macro-first without ingredient or evidence drill-down copy", () => {
+  it("does not mount a second hidden mobile catalog alongside the desktop layout", () => {
     const markup = renderCatalog(product({ calories: 360, proteinGrams: 52 }));
-    const mobile = markup.slice(markup.indexOf('class="catalog-mobile"'));
+    const mobile = markup;
 
-    expect(mobile).toContain("product-card-macros");
+    expect(mobile).not.toContain('class="catalog-mobile"');
     expect(mobile).not.toContain("Ingredients");
     expect(mobile).not.toContain("status-verified");
   });
 
-  it.each(["per_100g", "per_100ml"] as const)("shows the declared %s basis visibly on compact cards", (basis) => {
+  it.each(["per_100g", "per_100ml"] as const)("shows the declared %s basis visibly in the active catalog", (basis) => {
     const item = product({ calories: 360, proteinGrams: 52 });
     item.nutrition.basis = basis;
-    const mobile = renderCatalog(item).split('class="catalog-mobile"')[1];
-    expect(mobile).toContain(`<p class="product-card-basis">Macros per 100 ${basis === "per_100g" ? "g" : "ml"}</p>`);
+    const mobile = renderCatalog(item);
+    expect(mobile).toContain(`<small>per 100 ${basis === "per_100g" ? "g" : "ml"}</small>`);
   });
 
   it("labels machine nutrition as label-backed without presenting it as human-reviewed", () => {
@@ -142,7 +142,7 @@ describe("catalog comparison surface", () => {
     const markup = renderCatalog(product({ calories: null, proteinGrams: 52 }));
 
     expect(markup).toContain("Calories");
-    expect(markup).toContain("— kcal");
+    expect(markup).toContain(">—</strong>");
     expect(markup).not.toMatch(/>0 kcal</);
   });
 

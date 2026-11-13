@@ -4,6 +4,8 @@ Food compares packaged foods sold in India using Open Food Facts as its only pac
 
 The owner-selected Label Desk interface uses the shared UI library. Open Food Facts nutrition is accepted as source data; missing data and conflicts stay visible. The public interface uses source attribution rather than repeated unverified badges. See `/sources` and `/api/data-quality` for the exact snapshot and its limits. The surviving repository retains the Protein Index engine and recovery history; Recipe Index is imported under `archives/recipe-index`.
 
+Food uses shared UI 0.1.33 primitives for controls, tables, responsive product images and the native product dialog. Nutrition cells, source rules and page composition are product-specific. Each page loads25 products from the server and mounts one viewport layout; a full-list virtualizer is not needed for that bounded view. Recipe code and data load only on the recipe route. `pnpm perf:budget` checks production initial-route asset budgets and catches accidental operator/recipe imports.
+
 ## Current local workflow
 
 Use the exact pinned pnpm version and the managed Fleet workspace for installs and builds. `pnpm check` runs types, unit/Worker tests and build. `python3 test/test_off_parquet.py` checks the Parquet boundary. `pnpm dev --host 127.0.0.1` runs the app with the local D1 binding. Open `/operator` on localhost for the retained evidence queue and coverage workbench; public hosts always mount the read-only Food app.

@@ -1,11 +1,22 @@
-import { useDeferredValue, useEffect, useState } from "react";
+import { ErrorState } from "@saas-maker/ui/molecules/error-state";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@saas-maker/ui/atoms/table";
+import { NativeSelect } from "@saas-maker/ui/atoms/native-controls";
+import { Component, lazy, Suspense, type ReactNode, useEffect, useState } from "react";
 import { Button } from "@saas-maker/ui/atoms/button";
 import { Input } from "@saas-maker/ui/atoms/input";
-import { CatalogTable, ProductDrawer } from "./App";
+import { CatalogTable, ProductDrawer } from "./Catalog";
 import { api } from "./api";
 import { CATALOG_SORTS, defaultSortOrder, isCatalogSort, nextSortOrder, type CatalogSort, type SortOrder } from "../shared/catalog-sort";
-import { Recipes } from "./Recipes";
+const Recipes = lazy(() => import("./Recipes").then((module) => ({ default: module.Recipes })));
 import type { CatalogResponse, ProductDetailResponse } from "../shared/api";
+
+class RecipeBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  override state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  override render() {
+    return this.state.failed ? <ErrorState title="Recipes couldn’t load" description="Check your connection and reload the recipes." onRetry={() => window.location.reload()} /> : this.props.children;
+  }
+}
 
 type View = "foods" | "recipes" | "sources";
 type Filters = { q: string; category: string; scope: string; sort: CatalogSort; order: SortOrder };
@@ -51,7 +62,7 @@ function Sources() {
     {quality && <>
       <dl className="source-meta"><div><dt>Food source</dt><dd><a href="https://world.openfoodfacts.org/data" target="_blank" rel="noreferrer">Open Food Facts bulk export</a></dd></div><div><dt>Latest source edit</dt><dd>{quality.sourceUpdatedAt.slice(0, 10)}</dd></div><div><dt>Prepared snapshot</dt><dd>{quality.preparedAt.slice(0, 10)}</dd></div><div><dt>Scope</dt><dd>Products tagged as sold in India</dd></div></dl>
       <h2>What the snapshot contains</h2>
-      <div className="table-wrap"><table className="quality-table"><thead><tr><th>Check</th><th>Records</th><th>What it means</th></tr></thead><tbody>{[
+      <Table className="quality-table"><TableHeader><TableRow><TableHead>Check</TableHead><TableHead>Records</TableHead><TableHead>What it means</TableHead></TableRow></TableHeader><TableBody>{[
         ["Global rows in snapshot", quality.recordsRead, "The source Parquet metadata row count; all India-tagged rows were queried."],
         ["India-tagged source rows", quality.indiaRecords, "Country tags are contributor-provided; they do not prove current availability."],
         ["Accepted source records", quality.stagedRecords, "Named records retained with their original source and observations."],
@@ -64,7 +75,7 @@ function Sources() {
         ["Nutrition missing", quality.missingNutrition, "Neither calories nor protein is recorded. Missing is never converted to zero."],
         ["Nutrition label images", quality.withLabelImage, "A source image link exists. Presence does not establish a match or verification."],
         ["kJ conversions", quality.kilojouleConversions, "Calories derived only when kcal is absent, using 1 kcal = 4.184 kJ."],
-      ].map(([label, count, meaning]) => <tr key={String(label)}><th scope="row">{label}</th><td>{Number(count).toLocaleString("en-IN")}</td><td>{meaning}</td></tr>)}</tbody></table></div>
+      ].map(([label, count, meaning]) => <TableRow key={String(label)}><TableHead scope="row">{label}</TableHead><TableCell>{Number(count).toLocaleString("en-IN")}</TableCell><TableCell>{meaning}</TableCell></TableRow>)}</TableBody></Table>
       <h2>Selected label spot checks</h2><p>Three selected examples were visually compared with their source images. This is not a random sample or a catalog-wide accuracy estimate. Flagged records remain conflicts; no record was promoted to human-verified.</p><ul className="source-limits">{quality.labelSpotChecks.map((check) => <li key={check.code}><a href={check.sourceUrl} target="_blank" rel="noreferrer">{check.code}</a> · {check.result.replaceAll("_", " ")}. {check.note}</li>)}</ul>
       <h2>Limits to keep in mind</h2><ul className="source-limits">{quality.limitations.map((limit) => <li key={limit}>{limit}</li>)}</ul>
       <p><a href={quality.downloadPath} download>Download the attributed food snapshot</a> · <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noreferrer">Open Database License</a>. Product images have separate rights, including Open Food Facts’ <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noreferrer">CC BY-SA</a> terms.</p>
@@ -86,7 +97,13 @@ export function FoodApp() {
   const [detail, setDetail] = useState<ProductDetailResponse | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const query = useDeferredValue(filters.q);
+  const [query, setQuery] = useState(filters.q);
+  useEffect(() => {
+    if (!filters.q) { setQuery(""); return; }
+    const timer = window.setTimeout(() => setQuery(filters.q), 180);
+    return () => window.clearTimeout(timer);
+  }, [filters.q]);
+  const searching = loading || query !== filters.q;
   const navigate = (next: View) => {
     setView(next);
     window.history.pushState({}, "", next === "foods" ? "/" : `/${next}`);
@@ -110,14 +127,14 @@ export function FoodApp() {
     window.history.replaceState({}, "", `/${search.size ? `?${search}` : ""}`);
   };
   useEffect(() => {
-    if (view !== "foods") return;
+    if (view !== "foods" || query !== filters.q) return;
     const controller = new AbortController();
     setLoading(true); setError(null);
     const params = new URLSearchParams({ ...filters, q: query, trust: "all", verification: "all", ingredientVerification: "all", page: String(page), pageSize: "25" });
     api.catalog(params, controller.signal).then((result) => { if (controller.signal.aborted) return; setCatalog(result); setLoading(false); })
       .catch((reason: unknown) => { if (controller.signal.aborted) return; setError(reason instanceof Error ? reason.message : "Food data could not be loaded."); setLoading(false); });
     return () => controller.abort();
-  }, [query, filters.category, filters.scope, filters.sort, filters.order, page, retry, view]);
+  }, [query, filters.q, filters.category, filters.scope, filters.sort, filters.order, page, retry, view]);
   useEffect(() => {
     if (!selected) { setDetail(null); return; }
     const controller = new AbortController();
@@ -136,19 +153,19 @@ export function FoodApp() {
         <section className="food-intro"><div><h1>Compare the label.</h1><p>A food reference for Indian shoppers. Search packaged products, compare nutrition on the same basis, and trace every record to its source.</p></div><p className="basis-key"><strong>Keep the basis in view</strong>Food facts per 100 g or 100 ml<br />Recipes per stated serving</p></section>
         <form className="food-filters" role="search" onSubmit={(event) => event.preventDefault()}>
           <label className="food-search" htmlFor="food-search"><span className="sr-only">Search foods, brands or barcodes</span><Input id="food-search" type="search" value={filters.q} onChange={(event) => changeFilters({ q: event.target.value })} placeholder="Search a food, brand or barcode" /></label>
-          <label htmlFor="food-category"><span className="sr-only">Category</span><select id="food-category" value={filters.category} onChange={(event) => changeFilters({ category: event.target.value })}><option value="all">All categories</option>{Object.entries({ protein_powder: "Protein powders", protein_bar: "Protein bars", protein_snack: "Protein snacks", soy_product: "Soy & tofu", dairy: "Dairy", plant_dairy: "Plant dairy", ready_to_drink: "Drinks", breakfast: "Breakfast", spread: "Spreads", other: "Other foods" }).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
-          <label htmlFor="food-scope"><span className="sr-only">Food scope</span><select id="food-scope" value={filters.scope} onChange={(event) => changeFilters({ scope: event.target.value })}><option value="all">All foods</option><option value="protein">Protein foods</option><option value="protein_branded">Protein-branded foods</option></select></label>
-          <label htmlFor="food-sort"><span className="sr-only">Sort foods</span><select id="food-sort" aria-label="Sort foods" value={`${filters.sort}:${filters.order}`} onChange={(event) => { const [sort, order] = event.target.value.split(":"); if (sort && isCatalogSort(sort) && (order === "asc" || order === "desc")) changeFilters({ sort, order }); }}>{CATALOG_SORTS.map((sort) => <optgroup key={sort.key} label={sort.label}>{(["desc", "asc"] as const).map((order) => <option key={order} value={`${sort.key}:${order}`}>{sort.label} · {sort.key === "name" ? order === "asc" ? "A–Z" : "Z–A" : order === "asc" ? "low to high" : "high to low"}</option>)}</optgroup>)}</select></label>
+          <label htmlFor="food-category"><span className="sr-only">Category</span><NativeSelect id="food-category" value={filters.category} onChange={(event) => changeFilters({ category: event.target.value })}><option value="all">All categories</option>{Object.entries({ protein_powder: "Protein powders", protein_bar: "Protein bars", protein_snack: "Protein snacks", soy_product: "Soy & tofu", dairy: "Dairy", plant_dairy: "Plant dairy", ready_to_drink: "Drinks", breakfast: "Breakfast", spread: "Spreads", other: "Other foods" }).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</NativeSelect></label>
+          <label htmlFor="food-scope"><span className="sr-only">Food scope</span><NativeSelect id="food-scope" value={filters.scope} onChange={(event) => changeFilters({ scope: event.target.value })}><option value="all">All foods</option><option value="protein">Protein foods</option><option value="protein_branded">Protein-branded foods</option></NativeSelect></label>
+          <label htmlFor="food-sort"><span className="sr-only">Sort foods</span><NativeSelect id="food-sort" aria-label="Sort foods" value={`${filters.sort}:${filters.order}`} onChange={(event) => { const [sort, order] = event.target.value.split(":"); if (sort && isCatalogSort(sort) && (order === "asc" || order === "desc")) changeFilters({ sort, order }); }}>{CATALOG_SORTS.map((sort) => <optgroup key={sort.key} label={sort.label}>{(["desc", "asc"] as const).map((order) => <option key={order} value={`${sort.key}:${order}`}>{sort.label} · {sort.key === "name" ? order === "asc" ? "A–Z" : "Z–A" : order === "asc" ? "low to high" : "high to low"}</option>)}</optgroup>)}</NativeSelect></label>
         </form>
         <p className="food-sort-note">Sorts cover all results. Missing, conflicting or non-comparable amounts stay last.</p>
-        <section className="food-ledger" aria-label="Food nutrition reference" aria-busy={loading}><div className="ledger-heading"><h2>Nutrition reference</h2><p role="status">{loading ? "Loading food records…" : error ? "Could not load records" : `${catalog?.pagination.total.toLocaleString("en-IN") ?? 0} ${catalog?.pagination.total === 1 ? "product" : "products"}`}</p></div>
+        <section className="food-ledger" aria-label="Food nutrition reference" aria-busy={searching}><div className="ledger-heading"><h2>Nutrition reference</h2><p role="status">{searching ? "Loading food records…" : error ? "Could not load records" : `${catalog?.pagination.total.toLocaleString("en-IN") ?? 0} ${catalog?.pagination.total === 1 ? "product" : "products"}`}</p></div>
           {error && <div className="food-error" role="alert"><p>{error}</p><Button variant="outline" onClick={() => setRetry((value) => value + 1)}>Try again</Button></div>}
-          {loading && !catalog && <div className="food-loading" role="status">Loading the catalog…</div>}
-          {!error && catalog && <CatalogTable showUnverifiedStatus={false} data={catalog} busy={loading} sort={displayedSort} order={displayedOrder} onSort={(sort) => changeFilters({ sort, order: nextSortOrder(displayedSort, displayedOrder, sort) })} onOpen={setSelected} onExplore={() => changeFilters({ q: "", category: "all", scope: "all" })} page={catalog.pagination.page} onPage={(next) => { setPage(next); document.querySelector(".food-ledger")?.scrollIntoView({ block: "start" }); }} />}
+          {searching && !catalog && <div className="food-loading" role="status">Loading the catalog…</div>}
+          {!error && catalog && <CatalogTable showUnverifiedStatus={false} data={catalog} busy={searching} sort={displayedSort} order={displayedOrder} onSort={(sort) => changeFilters({ sort, order: nextSortOrder(displayedSort, displayedOrder, sort) })} onOpen={setSelected} onExplore={() => changeFilters({ q: "", category: "all", scope: "all" })} page={catalog.pagination.page} onPage={(next) => { setPage(next); document.querySelector(".food-ledger")?.scrollIntoView({ block: "start" }); }} />}
         </section>
         <aside className="food-context"><strong>Packaged-food data: Open Food Facts</strong><p>Open a product to see its source and observation date. Missing and conflicting values are flagged. <a href="/sources" onClick={(event) => { event.preventDefault(); navigate("sources"); }}>See the data-quality report</a>.</p></aside>
       </>}
-      {view === "recipes" && <Recipes />}
+      {view === "recipes" && <RecipeBoundary><Suspense fallback={<p role="status">Loading recipes…</p>}><Recipes /></Suspense></RecipeBoundary>}
       {view === "sources" && <Sources />}
     </main>
     <footer className="food-footer"><span>Food by Significant Hobbies</span><span><a href="https://world.openfoodfacts.org" target="_blank" rel="noreferrer">Open Food Facts</a> · <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noreferrer">ODbL</a> · <a href="https://github.com/Significant-Hobbies/food">Source code</a></span></footer>

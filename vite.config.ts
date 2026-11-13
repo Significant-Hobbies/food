@@ -9,6 +9,7 @@ export default defineConfig({
     transformer: "lightningcss",
   },
   build: {
+    manifest: true,
     cssMinify: "lightningcss",
   },
 });

@@ -1,5 +1,17 @@
-@import "@saas-maker/ui/styles.css";
-@source "./**/*.tsx";
+@import "@saas-maker/ui/theme.css";
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@source "./FoodApp.tsx";
+@source "../node_modules/@saas-maker/ui/src/components/error-state.tsx";
+@source "../node_modules/@saas-maker/ui/src/components/empty-state.tsx";
+@source "./Catalog.tsx";
+@source "./Recipes.tsx";
+@source "../node_modules/@saas-maker/ui/src/components/button.tsx";
+@source "../node_modules/@saas-maker/ui/src/components/input.tsx";
+@source "../node_modules/@saas-maker/ui/src/components/textarea.tsx";
+@source "../node_modules/@saas-maker/ui/src/components/table.tsx";
+@source "../node_modules/@saas-maker/ui/src/components/native-controls.tsx";
+@source "../node_modules/@saas-maker/ui/src/components/responsive-image.tsx";
+@source "../node_modules/@saas-maker/ui/src/lib/native-control-styles.ts";
 
 :root { --background: #f4f5f6; --foreground: #1b252b; --surface: #e9edef; --card: #fff; --primary: #1b252b; --primary-foreground: #fff; --brand: #995500; --brand-ink: #925000; --brand-soft: #fff0d6; --muted-foreground: #52606b; --border: #d7dde1; --radius: .5rem; --display-case: none; --ui-case: none; --font-display: "Geist Variable", sans-serif; --font-sans: "Geist Variable", sans-serif; }
 * { box-sizing: border-box; }
@@ -84,7 +96,8 @@ tbody tr:hover { background: #fbfcfc; }
 .food-context a { color: var(--brand-ink); }
 .food-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; border-top: 1px solid var(--border); padding: 24px 0 35px; margin-top: 20px; color: var(--muted-foreground); font-size: 11px; }
 .food-footer a { color: inherit; }
-.drawer-backdrop { position: fixed; z-index: 50; inset: 0; display: flex; justify-content: end; padding: 16px; background: rgb(15 25 33 / .5); }
+dialog.drawer { position: fixed; inset: 16px 16px 16px auto; margin: 0; width: min(660px, calc(100% - 32px)); height: calc(100dvh - 32px); max-width: none; max-height: none; border: 0; }
+dialog.drawer::backdrop { background: rgb(15 25 33 / .5); }
 .drawer { position: relative; width: min(660px, 100%); overflow-y: auto; padding: 32px; background: white; border-radius: 10px; }
 .drawer .close { display: grid; place-items: center; position: absolute; right: 15px; top: 15px; width: 44px; height: 44px; font-size: 28px; color: var(--muted-foreground); border: 0; background: #f0f3f5; border-radius: 6px; }
 .detail-head { display: flex; gap: 20px; align-items: flex-start; padding-right: 25px; margin: 25px 0 30px; }
@@ -185,7 +198,17 @@ tbody tr:hover { background: #fbfcfc; }
   .recipe-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .recipe-filters .search-field { grid-column: 1 / -1; }
   .recipe-card { padding: 22px 16px; } .recipe-card ul { columns: 1; }
   .source-meta { grid-template-columns: 1fr; gap: 16px; }
-  .drawer-backdrop { padding: 8px; } .drawer { padding: 24px 18px; } .detail-head { flex-direction: column; } .nutrition-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  dialog.drawer { inset: 8px 8px 8px auto; width: calc(100% - 16px); height: calc(100dvh - 16px); } .drawer { padding: 24px 18px; } .detail-head { flex-direction: column; } .nutrition-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pagination { padding-inline: 12px; font-size: 11px; } .pagination button { padding-inline: 10px; }
 }
 @media (prefers-reduced-motion: no-preference) { .food-topbar a, .product-link strong { transition: color .15s ease-out; } }
+
+.product-image { position: relative; display: block; width: 100%; height: 100%; background: transparent; }
+.product-image img { position: absolute; inset: 0; }
+.product-link { white-space: normal; }
+.recipe-exclusions input { width: 16px; height: 16px; min-height: 0; padding: 0; box-shadow: none; }
+.recipe-card [data-slot="native-disclosure"] { border: 0; border-radius: 0; background: transparent; }
+
+@media (pointer: coarse) { .food-filters input, .food-filters select, .recipe-filters input, .recipe-filters select { font-size: 16px; } }
+
+.quality-table th, .quality-table td { white-space: normal; }

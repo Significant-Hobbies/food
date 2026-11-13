@@ -45,7 +45,7 @@
     "data:guarded-release:state-query": "tsx scripts/sync.ts guarded-release-state-query",
     "data:guarded-release:final-state": "tsx scripts/sync.ts guarded-release-final-state",
     "data:audit-decisions": "tsx scripts/audit-decisions.ts",
-    "check": "pnpm cf-typegen && pnpm typecheck && pnpm test && pnpm build",
+    "check": "pnpm cf-typegen && pnpm typecheck && pnpm test && pnpm build && pnpm perf:budget",
     "docs:validate": "node scripts/validate-docs.mjs",
     "docs:dev": "blume dev",
     "docs:build": "blume build",
@@ -56,7 +56,8 @@
     "release:preflight": "pnpm check && pnpm release:startup && pnpm release:dry-run",
     "deploy": "node scripts/deploy.mjs",
     "knip": "knip --no-exit-code --reporter symbols",
-    "knip:strict": "knip --reporter symbols"
+    "knip:strict": "knip --reporter symbols",
+    "perf:budget": "node scripts/check-frontend-budget.mjs"
   },
   "dependencies": {
     "@saas-maker/app-health": "https://github.com/sass-maker/app-health/releases/download/node-v0.4.0/saas-maker-app-health-0.4.0.tgz",

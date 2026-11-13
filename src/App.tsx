@@ -32,7 +32,8 @@ import { validateNutrition } from "../shared/nutrition";
 import type { EvidenceStatus, MetricResult, NormalizedIngredient, NutritionPer100g } from "../shared/types";
 import { api, TerminalEvidenceRequestError } from "./api";
 import type { CatalogSort, SortOrder } from "../shared/catalog-sort";
-import imageExceptions from "../data/image-quality-exceptions.json";
+import { CatalogTable, ClassificationBadges, MetricValue, ProductDrawer, ProductVisual, formatNumber, metric, metricEvidenceLabel, nutritionBasisLabel, publicEvidenceUrl } from "./Catalog";
+export { CatalogTable, ClassificationBadges, MetricValue, ProductDrawer, ProductVisual, formatNumber, metric, metricEvidenceLabel, nutritionBasisLabel, publicEvidenceUrl } from "./Catalog";
 
 type Tab = "catalog" | "reviews" | "coverage";
 
@@ -79,9 +80,6 @@ const initialCompletionFilters = {
 };
 type CompletionUiFilters = typeof initialCompletionFilters;
 
-export function metricEvidenceLabel(status: NutritionEvidenceStatus): string {
-  return status === "machine_verified" ? "machine-verified from label" : status === "verified" ? "verified nutrition" : status === "unverified" ? "unverified nutrition" : `${status} nutrition`;
-}
 
 export interface ReviewNutritionCandidate {
   predictionId: string;
@@ -259,38 +257,9 @@ export function reviewIngredientCandidate(evidence: unknown): ReviewIngredientCa
   };
 }
 
-function formatNumber(value: number | null, digits = 1): string {
-  return value === null ? "—" : new Intl.NumberFormat("en-IN", { maximumFractionDigits: digits }).format(value);
-}
-
-function metric(result: MetricResult, suffix = ""): string {
-  return result.value === null ? "—" : `${formatNumber(result.value, 2)}${suffix}`;
-}
-
-function nutritionBasisLabel(basis: CatalogProduct["nutrition"]["basis"]): string {
-  return basis === "per_100ml" ? "per 100 ml" : basis === "per_serving" ? "per serving" : basis === "per_100g" ? "per 100 g" : "declared basis not stated";
-}
-
-export function publicEvidenceUrl(value: string | null): string | null {
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
-  } catch {
-    return null;
-  }
-}
-
 export function nutrientDisplayName(code: string): string {
   const label = code.replaceAll("_", " ").replaceAll("-", " ").trim();
   return label ? `${label[0]?.toUpperCase() ?? ""}${label.slice(1)}` : "Nutrient";
-}
-
-function MetricValue({ result, prefix = "", suffix = "" }: { result: MetricResult; prefix?: string; suffix?: string }) {
-  if (result.value === null) {
-    return <span className="metric-unavailable">Unavailable<small>{(result.reason ?? "missing inputs").replaceAll("_", " ")}</small></span>;
-  }
-  return <>{prefix}{formatNumber(result.value, 2)}{suffix}</>;
 }
 
 function StatusBadge({ status }: { status: EvidenceStatus | NutritionEvidenceStatus }) {
@@ -333,98 +302,6 @@ function IngredientStatusBadge({ product }: { product: Pick<CatalogProduct, "ing
   return <StatusBadge status={product.ingredientStatus} />;
 }
 
-function ProductVisual({ product, size = "small" }: { product: Pick<CatalogProduct, "imageUrl" | "brand" | "name">; size?: "small" | "large" }) {
-  const [failed, setFailed] = useState(false);
-  const initials = `${product.brand} ${product.name}`.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]?.toUpperCase()).join("");
-  return (
-    <div className={`product-visual product-visual-${size}`} aria-hidden="true">
-      {product.imageUrl && !failed && !imageExceptions.some((exception) => exception.imageUrl === product.imageUrl)
-        ? <img src={product.imageUrl} alt="" loading="lazy" onError={() => setFailed(true)} />
-        : <span>{initials || "PI"}</span>}
-    </div>
-  );
-}
-
-function ClassificationBadges({ product }: { product: CatalogProduct }) {
-  return (
-    <div className="badge-row">
-      {product.marketedProtein && <span className="tag tag-market">marketed protein</span>}
-      {product.nutritionallyProteinDense === true && <span className="tag tag-dense">protein-dense</span>}
-    </div>
-  );
-}
-
-export function CatalogTable({ data, onOpen, onExplore, page, onPage, sort, order = "desc", onSort, busy = false, showUnverifiedStatus = true }: {
-  data: CatalogResponse;
-  busy?: boolean;
-  showUnverifiedStatus?: boolean;
-  sort?: CatalogSort;
-  order?: SortOrder;
-  onSort?: (sort: CatalogSort) => void;
-  onOpen: (id: string) => void;
-  onExplore: () => void;
-  page: number;
-  onPage: (page: number) => void;
-}) {
-  if (data.products.length === 0) {
-    return (
-      <div className="empty empty-catalog">
-        <span className="empty-mark" aria-hidden="true">0</span>
-        <strong>{data.trustedDefault ? "No fully trusted products yet." : "No products match this view."}</strong>
-        <span>{data.trustedDefault ? "Trusted comparisons require exact current identity, verified nutrition, and terminal ingredient evidence." : "Try a broader category, scope, or evidence filter."}</span>
-        {data.trustedDefault && <button onClick={onExplore}>Explore the discovery catalog</button>}
-      </div>
-    );
-  }
-  return (
-    <>
-      <div className="table-wrap catalog-desktop">
-        <table>
-        <thead>
-          <tr>
-            {([["name", "Product"], ["protein_density", "Protein / 100 kcal"], ["protein", "Protein"], ["carbs", "Carbs"], ["fat", "Fat"], ["fibre", "Fibre"], ["calories", "Calories"]] as const).map(([key, label]) => <th key={key} scope="col" aria-sort={onSort ? sort === key ? order === "asc" ? "ascending" : "descending" : "none" : undefined}>
-              {onSort ? <button className="column-sort" onClick={() => onSort(key)}>{label}<span aria-hidden="true">{sort === key ? order === "asc" ? "↑" : "↓" : "↕"}</span></button> : label}
-            </th> )}
-          </tr>
-        </thead>
-        <tbody inert={busy}>
-          {data.products.map((product) => (
-            <tr key={product.id} className="product-row" onClick={(event) => { if ((event.target as HTMLElement).closest("button, a") || window.getSelection()?.toString()) return; event.currentTarget.querySelector<HTMLButtonElement>("button")?.focus(); onOpen(product.id); }}>
-              <td className="product-cell">
-                <div className="product-identity"><ProductVisual product={product} /><div><button className="product-link" onClick={() => onOpen(product.id)}><strong>{product.name}</strong><span>{product.brand}{product.flavour ? ` · ${product.flavour}` : ""}</span></button><ClassificationBadges product={product} /></div></div>
-              </td>
-              <td className="metric-primary"><strong>{metric(product.metrics.proteinPer100Calories, " g")}</strong>{(showUnverifiedStatus || product.nutritionStatus !== "unverified") && <small>{metricEvidenceLabel(product.nutritionStatus)}</small>}</td>
-              <td><strong>{formatNumber(product.nutrition.proteinGrams)} g</strong><small>{nutritionBasisLabel(product.nutrition.basis)}</small></td>
-              <td><strong>{formatNumber(product.nutrition.carbohydrateGrams)} g</strong><small>{nutritionBasisLabel(product.nutrition.basis)}</small></td>
-              <td><strong>{formatNumber(product.nutrition.fatGrams)} g</strong><small>{nutritionBasisLabel(product.nutrition.basis)}</small></td>
-              <td><strong>{formatNumber(product.nutrition.fibreGrams)} g</strong><small>{nutritionBasisLabel(product.nutrition.basis)}</small></td>
-              <td><strong>{product.nutrition.calories === null ? "—" : `${formatNumber(product.nutrition.calories)} kcal`}</strong><small>{nutritionBasisLabel(product.nutrition.basis)}</small></td>
-            </tr>
-          ))}
-        </tbody>
-        </table>
-      </div>
-      <div className="catalog-mobile" aria-label="Catalog products" inert={busy}>
-        {data.products.map((product) => (
-          <article className="product-card" key={product.id} onClick={(event) => { if ((event.target as HTMLElement).closest("button, a") || window.getSelection()?.toString()) return; event.currentTarget.querySelector<HTMLButtonElement>("button")?.focus(); onOpen(product.id); }}>
-            <button className="product-card-main" onClick={() => onOpen(product.id)}>
-              <ProductVisual product={product} />
-              <span className="product-card-copy"><small>{product.brand}</small><strong>{product.name}</strong><em>{product.flavour ?? product.category.replaceAll("_", " ")}</em></span>
-              <span className="card-arrow" aria-hidden="true">↗</span>
-            </button>
-            <div className="product-card-metric"><strong>{metric(product.metrics.proteinPer100Calories, " g")}</strong><span>protein / 100 kcal</span>{(showUnverifiedStatus || product.nutritionStatus !== "unverified") && <small>{metricEvidenceLabel(product.nutritionStatus)}</small>}</div>
-            <p className="product-card-basis">Macros {nutritionBasisLabel(product.nutrition.basis)}</p>
-            <div className="product-card-macros" aria-label={`Macros ${nutritionBasisLabel(product.nutrition.basis)}`}>
-              {[["Protein", product.nutrition.proteinGrams], ["Carbs", product.nutrition.carbohydrateGrams], ["Fat", product.nutrition.fatGrams], ["Fibre", product.nutrition.fibreGrams], ["Calories", product.nutrition.calories]].map(([label, value]) => <span key={String(label)}><small>{label}</small><strong>{formatNumber(value as number | null)}{label === "Calories" ? " kcal" : " g"}</strong></span>)}
-            </div>
-          </article>
-        ))}
-      </div>
-      {data.pagination.pages > 1 && <nav className="pagination" aria-label="Catalog pages"><button disabled={busy || page <= 1} onClick={() => onPage(page - 1)}>← Previous</button><span>Page <strong>{page}</strong> of {data.pagination.pages.toLocaleString("en-IN")}</span><button disabled={busy || page >= data.pagination.pages} onClick={() => onPage(page + 1)}>Next →</button></nav>}
-    </>
-  );
-}
-
 function IngredientTree({ items }: { items: NormalizedIngredient[] }) {
   if (items.length === 0) return <p className="muted">No normalized ingredients available.</p>;
   return (
@@ -437,104 +314,6 @@ function IngredientTree({ items }: { items: NormalizedIngredient[] }) {
         </li>
       ))}
     </ol>
-  );
-}
-
-export function ProductDrawer({ detail, loading, error, onClose, showUnverifiedStatus = true }: {
-  detail: ProductDetailResponse | null;
-  showUnverifiedStatus?: boolean;
-  loading: boolean;
-  error: string | null;
-  onClose: () => void;
-}) {
-  const sourceNutrition = !showUnverifiedStatus && detail?.nutritionStatus === "unverified";
-  const sourceLabel = detail && detail.sourceRecords.length > 0 && detail.sourceRecords.every((record) => record.source === "open_food_facts") ? "Open Food Facts" : "Source nutrition";
-  const evidenceUrl = publicEvidenceUrl(detail?.nutritionEvidenceUrl ?? null);
-  const observedAt = detail?.nutrition.observedAt;
-  const observedDate = observedAt && Number.isFinite(Date.parse(observedAt)) ? new Date(observedAt).toISOString().slice(0, 10) : null;
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const drawerRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    closeRef.current?.focus();
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-      if (event.key !== "Tab" || !drawerRef.current) return;
-      const focusable = [...drawerRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])')];
-      const first = focusable[0];
-      const last = focusable.at(-1);
-      if (!first || !last) return;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    window.addEventListener("keydown", close);
-    return () => {
-      window.removeEventListener("keydown", close);
-      document.body.style.overflow = previousOverflow;
-      previouslyFocused?.focus();
-    };
-  }, [onClose]);
-
-  return (
-    <div className="drawer-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <aside ref={drawerRef} className="drawer" role="dialog" aria-modal="true" aria-label="Product evidence detail">
-        <button ref={closeRef} className="close" onClick={onClose} aria-label="Close product detail">×</button>
-        {loading && <div className="loading" role="status">Loading product evidence…</div>}
-        {error && <div className="error-state" role="alert">{error}</div>}
-        {detail && (
-          <>
-            <header className="detail-head">
-              <ProductVisual product={detail} size="large" />
-              <div><p className="eyebrow">{detail.brand} · {detail.category.replaceAll("_", " ")}</p><h2>{detail.name}</h2><p>{detail.flavour ?? "No flavour declared"} · GTIN {detail.gtin ?? "not recorded"}</p><div className="product-pack-meta"><span><small>Pack size</small><strong>{detail.netQuantityGrams === null ? "Not recorded" : `${formatNumber(detail.netQuantityGrams, 0)} g`}</strong></span><span><small>Serving size</small><strong>{detail.servingSizeGrams === null ? "Not recorded" : `${formatNumber(detail.servingSizeGrams, 1)} g`}</strong></span></div><ClassificationBadges product={detail} /></div>
-            </header>
-
-            <section>
-              <div className="section-title"><div><h3>Macros · {nutritionBasisLabel(detail.nutrition.basis)}</h3><small>Per declared nutrition basis</small></div></div>
-              <div className="nutrition-evidence" aria-label="Nutrition evidence">
-                <p><strong>{sourceNutrition ? sourceLabel : metricEvidenceLabel(detail.nutritionStatus)}</strong></p>
-                {!sourceNutrition && <p>{detail.nutritionEvidenceAuthority === "human_reviewed_label" ? "Human-reviewed label." : detail.nutritionEvidenceAuthority === "authoritative_source" ? "Authoritative source record." : detail.nutritionEvidenceAuthority === "machine_verified_label" ? "Machine-checked label; not human reviewed." : detail.nutritionEvidenceAuthority === "first_party_structured_source" ? "Brand-provided structured data; not a human-reviewed label." : detail.nutritionEvidenceAuthority === "community" ? "Community-provided data." : "Evidence authority not recorded."}</p>}
-                {(evidenceUrl || !sourceNutrition) && <p>{evidenceUrl ? <a href={evidenceUrl} target="_blank" rel="noreferrer">{detail.nutritionEvidenceKind === "label" ? "View original nutrition label" : "View nutrition source"} ↗</a> : "Original nutrition source link unavailable."}</p>}
-                <small>{observedDate ? <>Observed <time dateTime={observedAt ?? undefined}>{observedDate}</time></> : "Observation date unavailable."}</small>
-              </div>
-              <div className="nutrition-grid">
-                {[
-                  ["Protein", detail.nutrition.proteinGrams, "g"],
-                  ["Carbohydrate", detail.nutrition.carbohydrateGrams, "g"],
-                  ["Fat", detail.nutrition.fatGrams, "g"],
-                  ["Fibre", detail.nutrition.fibreGrams, "g"],
-                  ["Calories", detail.nutrition.calories, "kcal"],
-                ].map(([label, value, unit]) => <div key={String(label)}><span>{label}</span><strong>{formatNumber(value as number | null)} {unit}</strong></div>)}
-              </div>
-            </section>
-
-            <section>
-              <h3>Protein density</h3>
-              <p>{showUnverifiedStatus ? "Calculated from the macros above; the same evidence status applies." : "Calculated from the macros above."}</p>
-              <div className="metric-grid">
-                <div><span>Protein / 100 kcal</span><strong><MetricValue result={detail.metrics.proteinPer100Calories} suffix=" g" /></strong></div>
-              </div>
-            </section>
-
-            <section aria-label="Original catalog sources">
-              <h3>Original catalog sources</h3>
-              <p>{showUnverifiedStatus ? "Records associated with this product. These links do not verify the macros above." : "Product records and original source links."}</p>
-              {detail.sourceRecords.length === 0 ? <p>No source records available.</p> : <ul>
-                {detail.sourceRecords.map((record) => {
-                  const url = publicEvidenceUrl(record.sourceUrl);
-                  const date = Number.isFinite(Date.parse(record.observedAt)) ? new Date(record.observedAt).toISOString().slice(0, 10) : null;
-                  return <li key={record.id}>
-                    {url ? <a href={url} target="_blank" rel="noreferrer">{record.source.replaceAll("_", " ")} ↗</a> : <span>{record.source.replaceAll("_", " ")} · source link unavailable</span>}
-                    {date ? <> · observed <time dateTime={record.observedAt}>{date}</time></> : " · observation date unavailable"}
-                  </li>;
-                })}
-              </ul>}
-            </section>
-          </>
-        )}
-      </aside>
-    </div>
   );
 }
 
