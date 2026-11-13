@@ -1,6 +1,8 @@
-import { createElement } from "react";
+// @vitest-environment happy-dom
+import { act, createElement } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ProductDrawer, CatalogTable, HeaderProductLookup, lookupDestination } from "../src/App";
 import type { CatalogProduct, CatalogResponse, ProductDetailResponse } from "../shared/api";
 import { calculateMetrics } from "../shared/metrics";
@@ -227,5 +229,39 @@ describe("detail source records", () => {
     expect(markup).not.toContain("javascript:");
     expect(markup).toContain("source link unavailable");
     expect(markup).toContain("observation date unavailable");
+  });
+});
+
+
+describe("responsive catalog mounting", () => {
+  it.each(["per_100g", "per_100ml"] as const)("keeps %s macros visible when switching between cards and table", async (basis) => {
+    let mobile = true;
+    let changed = () => {};
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    vi.stubGlobal("matchMedia", () => ({ matches: mobile, addEventListener: (_: string, callback: () => void) => { changed = callback; }, removeEventListener: () => {} }));
+    const item = product({ calories: 360, proteinGrams: 52 });
+    item.nutrition.basis = basis;
+    const data: CatalogResponse = { products: [item], pagination: { page: 1, pageSize: 25, total: 1, pages: 1 }, trustedDefault: false, filters: {} };
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(createElement(CatalogTable, { data, page: 1, onPage: () => {}, onOpen: () => {}, onExplore: () => {} })));
+      expect(container.querySelectorAll(".product-card")).toHaveLength(1);
+      expect(container.querySelector(".catalog-desktop")).toBeNull();
+      expect(container.querySelector(".product-card-basis")?.textContent).toBe(`Macros per 100 ${basis === "per_100g" ? "g" : "ml"}`);
+      const macros = container.querySelector(".product-card-macros")?.textContent;
+      for (const label of ["Protein", "Carbs", "Fat", "Fibre", "Calories"]) expect(macros).toContain(label);
+      expect(macros).toContain("52 g");
+      expect(macros).toContain("360 kcal");
+      mobile = false;
+      await act(async () => changed());
+      expect(container.querySelector(".catalog-mobile")).toBeNull();
+      expect(container.querySelectorAll(".table-wrap.catalog-desktop .product-row")).toHaveLength(1);
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+      vi.unstubAllGlobals();
+    }
   });
 });

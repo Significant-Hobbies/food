@@ -106,7 +106,7 @@ export function CatalogTable({ data, onOpen, onExplore, page, onPage, sort, orde
   }
   return (
     <>
-      {!mobile && <div className="catalog-desktop">
+      {!mobile && <div className="table-wrap catalog-desktop">
         <Table>
         <TableHeader>
           <TableRow>
@@ -183,7 +183,7 @@ export function ProductDrawer({ detail, loading, error, onClose, showUnverifiedS
   }, []);
 
   return (
-    <NativeDialog ref={drawerRef} className="drawer" role="dialog" aria-modal="true" aria-label="Product evidence detail" onCancel={(event) => { event.preventDefault(); onClose(); }} onClick={(event) => {
+    <NativeDialog ref={drawerRef} className="drawer" role="dialog" aria-modal="true" aria-label="Product evidence detail" onCancel={(event) => { event.preventDefault(); onClose(); }} onPointerDown={(event) => {
       if (event.target !== event.currentTarget) return;
       const rect = event.currentTarget.getBoundingClientRect();
       if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) onClose();
