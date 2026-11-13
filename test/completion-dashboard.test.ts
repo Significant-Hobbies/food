@@ -998,3 +998,82 @@ describe("completion outcome dashboard", () => {
     });
   });
 });
+
+function redundantReview(): ReviewItem {
+  return {
+      id: "review-identity",
+      type: "nutrition_validation",
+      priority: 90,
+      status: "open",
+      productId: "incoming-product",
+      productName: "Incoming exact identity",
+      brand: "Evidence Foods",
+      sourceRecordId: "source-record-identity",
+      sourceUrl: "https://example.com/current-source",
+      candidateProductIds: ["canonical-product"],
+      candidates: [{
+        id: "canonical-product",
+        gtin: "08900000000012",
+        brand: "Evidence Foods",
+        name: "Canonical exact identity",
+        flavour: null,
+        netQuantityGrams: 1000,
+        category: "protein_powder",
+      }],
+      evidence: {},
+      selectedProjection: null,
+      redundantProjectionMatches: false,
+      redundantEligible: true,
+      createdAt: "2026-07-17T12:00:00.000Z",
+      decision: null,
+      rationale: null,
+      decisionEvidenceUrl: null,
+      decidedBy: null,
+    };
+}
+
+describe("shared modal review regressions", () => {
+  it("edits the rationale inside the redundant confirmation and keeps a failed save visible there", async () => {
+    const review = redundantReview();
+    const onResolve = vi.fn().mockRejectedValue(new Error("The source changed; inspect it again."));
+    const data: ReviewResponse = { items: [review], counts: { open: 1, resolved: 0, dismissed: 0 }, pagination: { page: 1, pageSize: 50, total: 1, pages: 1 } };
+    renderInteractive(createElement(Reviews, { data, loading: false, error: null, onResolve, onOpenProduct: () => {}, typeFilter: "all", statusFilter: "open", page: 1, onType: () => {}, onStatus: () => {}, onPage: () => {} }));
+    const open = [...document.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "Record redundant evidence")!;
+    act(() => open.click());
+    await flushEffects();
+    const dialog = document.querySelector<HTMLElement>('[role="alertdialog"]')!;
+    const confirm = [...dialog.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "Confirm as redundant")!;
+    expect(confirm.disabled).toBe(true);
+    setControlValue(dialog.querySelector("textarea")!, "Exact matching source evidence");
+    expect(confirm.disabled).toBe(false);
+    await act(async () => { confirm.click(); await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(onResolve).toHaveBeenCalledWith(review, "redundant_nutrition", "Exact matching source evidence", null, null, null, null);
+    expect(dialog.querySelector('[role="alert"]')?.textContent).toContain("The source changed");
+    expect(document.querySelector('[role="alertdialog"]')).toBe(dialog);
+    expect(dialog.querySelector("textarea")?.value).toBe("Exact matching source evidence");
+  });
+
+  it("preserves an identity draft on outside clicks and blocks Escape while its save is pending", async () => {
+    let rejectSave: (error: Error) => void = () => {};
+    vi.spyOn(api, "verifyIdentityEvidence").mockImplementation(() => new Promise((_, reject) => { rejectSave = reject; }));
+    const { container } = renderInteractive(createElement(IdentityWorklistHarness));
+    const trigger = container.querySelector<HTMLButtonElement>('.completion-desktop button[aria-label^="Verify exact identity"]')!;
+    act(() => { trigger.focus(); trigger.click(); });
+    await flushEffects();
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+    const rationale = dialog.querySelector<HTMLTextAreaElement>("textarea")!;
+    setControlValue(rationale, "Keep this exact inspected rationale");
+    act(() => dialog.querySelector<HTMLButtonElement>('[role="checkbox"]')!.click());
+    const overlay = document.querySelector('[data-slot="dialog-overlay"]')!;
+    act(() => overlay.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerType: "mouse" })));
+    await flushEffects();
+    expect(document.querySelector('[role="dialog"]')).toBe(dialog);
+    expect(rationale.value).toBe("Keep this exact inspected rationale");
+    await submitForm(dialog.querySelector("form")!);
+    act(() => document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })));
+    expect(document.querySelector('[role="dialog"]')).toBe(dialog);
+    await act(async () => { rejectSave(new Error("The source is stale.")); await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(dialog.querySelector('[role="alert"]')?.textContent).toContain("The source is stale.");
+    expect(rationale.value).toBe("Keep this exact inspected rationale");
+  });
+});

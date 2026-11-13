@@ -71,6 +71,7 @@ describe("reviewed nutrition dashboard", () => {
 
     const markup = renderDialog(createElement(NutritionCorrectionConfirmation, {
       reviewId: "review-volume",
+      error: "The source changed; inspect it again.",
       candidate: volumeCandidate,
       projection: result.projection!,
       changes: nutritionFieldChanges(volumeCandidate, result.projection!),
@@ -83,6 +84,7 @@ describe("reviewed nutrition dashboard", () => {
     expect(markup).toContain("per 100 mL");
     expect(markup).toContain("per 100 g");
     expect(markup).toContain("Confirm corrected values");
+    expect(markup).toContain("The source changed; inspect it again.");
   });
 
   it("rejects missing required, negative, and physically inconsistent values", () => {

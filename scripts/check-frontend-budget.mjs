@@ -20,6 +20,6 @@ for (const key of [main, "src/FoodApp.tsx", "src/food.css"]) include(key);
 const assets = [...files].map((file) => ({ file, bytes: statSync(resolve(root, file)).size }));
 const jsBytes = assets.filter(({ file }) => file.endsWith(".js")).reduce((sum, asset) => sum + asset.bytes, 0);
 const cssBytes = assets.filter(({ file }) => file.endsWith(".css")).reduce((sum, asset) => sum + asset.bytes, 0);
-if (visited.has("src/App.tsx") || visited.has("src/Recipes.tsx")) throw new Error("Inactive operator or recipe route is eagerly loaded");
+if (["src/App.tsx", "src/Recipes.tsx", "src/ProductDrawer.tsx", "src/Sources.tsx"].some((key) => visited.has(key))) throw new Error("An inactive route or product-detail module is eagerly loaded");
 if (jsBytes > 300_000 || cssBytes > 100_000) throw new Error(`Initial route budget exceeded: JS ${jsBytes}, CSS ${cssBytes}`);
 console.log(JSON.stringify({ route: "/", jsBytes, cssBytes, assets, deferred: ["src/App.tsx", "src/Recipes.tsx", "src/ProductDrawer.tsx", "src/Sources.tsx"] }, null, 2));

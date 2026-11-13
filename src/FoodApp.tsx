@@ -15,11 +15,11 @@ const Sources = lazy(() => import("./Sources").then((module) => ({ default: modu
 const Recipes = lazy(() => import("./Recipes").then((module) => ({ default: module.Recipes })));
 import type { CatalogResponse, ProductDetailResponse } from "../shared/api";
 
-class RecipeBoundary extends Component<{ children: ReactNode; name?: string }, { failed: boolean }> {
+class RecipeBoundary extends Component<{ children: ReactNode; name?: string; onDismiss?: () => void }, { failed: boolean }> {
   override state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
   override render() {
-    return this.state.failed ? <ErrorState title={(this.props.name ?? "Recipes") + " couldn’t load"} description="Check your connection and reload this section." onRetry={() => window.location.reload()} /> : this.props.children;
+    return this.state.failed ? <><ErrorState title={(this.props.name ?? "Recipes") + " couldn’t load"} description="Check your connection and reload this section." onRetry={() => window.location.reload()} />{this.props.onDismiss && <Button variant="ghost" onClick={this.props.onDismiss}>Close</Button>}</> : this.props.children;
   }
 }
 
@@ -124,6 +124,6 @@ export function FoodApp() {
       {view === "sources" && <RecipeBoundary name="Data & sources"><Suspense fallback={<Skeleton className="h-48 w-full" role="status" aria-label="Loading data & sources…" />}><Sources /></Suspense></RecipeBoundary>}
     </main>
     <footer className="food-footer"><span>Food by Significant Hobbies</span><span><Button asChild variant="link" className="h-auto whitespace-normal text-left"><a href="https://world.openfoodfacts.org" target="_blank" rel="noreferrer">Open Food Facts</a></Button> · <Button asChild variant="link" className="h-auto whitespace-normal text-left"><a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noreferrer">ODbL</a></Button> · <Button asChild variant="link" className="h-auto whitespace-normal text-left"><a href="https://github.com/Significant-Hobbies/food">Source code</a></Button></span></footer>
-    {selected && <RecipeBoundary key={selected} name="Product details"><Suspense fallback={<Skeleton role="status" aria-label="Opening product…" className="h-12 w-full" />}><ProductDrawer showUnverifiedStatus={false} detail={detail} loading={detailLoading} error={detailError} onClose={() => setSelected(null)} /></Suspense></RecipeBoundary>}
+    {selected && <Card className="product-detail-pending empty:hidden"><RecipeBoundary key={selected} name="Product details" onDismiss={() => setSelected(null)}><Suspense fallback={<><Skeleton role="status" aria-label="Opening product…" className="h-12 w-full" /><Button variant="ghost" onClick={() => setSelected(null)}>Close</Button></>}><ProductDrawer showUnverifiedStatus={false} detail={detail} loading={detailLoading} error={detailError} onClose={() => setSelected(null)} /></Suspense></RecipeBoundary></Card>}
   </div>;
 }

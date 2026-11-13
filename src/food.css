@@ -203,3 +203,5 @@ tbody tr:hover { background: #fbfcfc; }
 @media (max-width: 480px) { .food-navigation [data-slot="navigation-menu-list"] { gap: 12px; } }
 
 .recipe-filters label { align-items: stretch; }
+
+.product-detail-pending { position: fixed; z-index: 50; top: 16px; right: 16px; width: min(660px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; }

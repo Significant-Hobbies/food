@@ -479,6 +479,7 @@ export function NutritionCorrectionConfirmation({
   projection,
   changes,
   working,
+  error,
   onConfirm,
   onCancel,
 }: {
@@ -487,6 +488,7 @@ export function NutritionCorrectionConfirmation({
   projection: ReviewedNutritionProjection;
   changes: NutritionFieldChange[];
   working: boolean;
+  error?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -497,6 +499,7 @@ export function NutritionCorrectionConfirmation({
       <AlertDialogDescription id={`nutrition-confirm-description-${reviewId}`}>This creates verified nutrition from the reviewer-entered values and retains the model output in the audit trail.</AlertDialogDescription>
       {basisChanged && <p className="basis-change"><b>Basis changed:</b> {candidate.normalizedBasis === "per_100g" ? "per 100 g" : "per 100 mL"} → {projection.basis === "per_100g" ? "per 100 g" : "per 100 mL"}</p>}
       <ul>{changes.map((change) => <li key={change.field}><span>{nutritionFieldLabel(change.field)}</span><del>{nutritionFieldValue(change.originalValue, change.field)}</del><strong>{nutritionFieldValue(change.reviewedValue, change.field)}</strong></li>)}</ul>
+      {error && <ErrorState title="Decision was not saved." description={error} />}
       <div><Button autoFocus disabled={working} onClick={onConfirm}>Confirm corrected values</Button><AlertDialogCancel className="ghost" disabled={working}>Cancel</AlertDialogCancel></div>
     </AlertDialogContent></AlertDialog>
   );
@@ -507,12 +510,14 @@ export function NutritionCorrectionEditor({
   candidate,
   rationale,
   working,
+  error,
   onSubmit,
 }: {
   reviewId: string;
   candidate: ReviewNutritionCandidate;
   rationale: string;
   working: boolean;
+  error?: string;
   onSubmit: (projection: ReviewedNutritionProjection) => Promise<boolean>;
 }) {
   const [draft, setDraft] = useState<NutritionReviewDraft>(() => nutritionDraftFromCandidate(candidate));
@@ -550,7 +555,7 @@ export function NutritionCorrectionEditor({
       {result.errors.form && <Alert className="nutrition-form-error" role="alert">{result.errors.form}</Alert>}
       <Button variant="outline" className="corrected-verification" disabled={working || !result.projection || !hasChanges || rationale.trim().length < 3} onClick={openConfirmation} aria-haspopup="dialog">Review corrected verification</Button>
       {rationale.trim().length < 3 && <small className="nutrition-correction-help">Add a rationale of at least 3 characters before reviewing the correction.</small>}
-      {confirming && result.projection && <NutritionCorrectionConfirmation reviewId={reviewId} candidate={candidate} projection={result.projection} changes={changes} working={working} onConfirm={confirm} onCancel={() => setConfirming(false)} />}
+      {confirming && result.projection && <NutritionCorrectionConfirmation reviewId={reviewId} candidate={candidate} projection={result.projection} changes={changes} working={working} error={error} onConfirm={confirm} onCancel={() => setConfirming(false)} />}
     </section>
   );
 }
@@ -739,7 +744,7 @@ export function Reviews({ data, loading, error, onResolve, onOpenProduct, typeFi
         return (
         <Card role="article" className={`review-card${candidate || ingredientCandidate ? " review-card-candidate" : ""}${item.decision === "redundant_nutrition" ? " review-card-redundant" : ""}`} key={item.id}>
           <header><span className="priority">P{item.priority}</span><div><h3>{item.productName ?? "Unmatched source record"}</h3><p>{item.brand ?? item.sourceRecordId} · {item.type.replaceAll("_", " ")}</p></div></header>
-          {candidate && <NutritionCandidateEvidence candidate={candidate} productName={item.productName} editor={!readOnly && item.status === "open" ? <NutritionCorrectionEditor reviewId={item.id} candidate={candidate} rationale={rationale} working={working === item.id} onSubmit={(projection) => runAction(item.id, () => onResolve(item, "verify_nutrition", rationale, candidate.imageUrl, null, null, projection))} /> : null} />}
+          {candidate && <NutritionCandidateEvidence candidate={candidate} productName={item.productName} editor={!readOnly && item.status === "open" ? <NutritionCorrectionEditor reviewId={item.id} candidate={candidate} rationale={rationale} working={working === item.id} error={actionErrors[item.id]} onSubmit={(projection) => runAction(item.id, () => onResolve(item, "verify_nutrition", rationale, candidate.imageUrl, null, null, projection))} /> : null} />}
           {(item.redundantEligible || item.decision === "redundant_nutrition") && item.selectedProjection && <section className="redundant-match" aria-label={item.decision === "redundant_nutrition" ? "Recorded redundant nutrition evidence" : "Exact duplicate nutrition evidence available"}>
             <div><Badge variant="outline" className="redundant-badge">{item.decision === "redundant_nutrition" ? "Redundant evidence" : "Exact duplicate"}</Badge><h4>{item.decision === "redundant_nutrition" ? (item.redundantProjectionMatches ? "Recorded without changing verified nutrition" : "Recorded projection no longer matches") : "This label matches the selected projection"}</h4><p>{item.decision === "redundant_nutrition" ? (item.redundantProjectionMatches ? "The source-bound label was retained as terminal corroborating evidence. It did not create, replace, or re-verify a nutrition fact." : "The current selected projection has drifted. This historical decision must not be treated as current corroboration and reconciliation should return it to review.") : "All eight supported values and the physical basis match exactly. Recording redundancy will resolve only this evidence item."}</p></div>
             <SelectedProjection projection={item.selectedProjection} />
@@ -786,6 +791,8 @@ export function Reviews({ data, loading, error, onResolve, onOpenProduct, typeFi
           {item.status === "open" && item.redundantEligible && confirmingRedundant === item.id && <AlertDialog open onOpenChange={(open) => { if (!open && working !== item.id) setConfirmingRedundant(null); }}><AlertDialogContent className="redundant-confirmation" aria-labelledby={`redundant-confirm-${item.id}`} aria-describedby={`redundant-description-${item.id}`}>
             <AlertDialogTitle id={`redundant-confirm-${item.id}`}>Confirm redundant evidence</AlertDialogTitle>
             <AlertDialogDescription id={`redundant-description-${item.id}`}>This will resolve only this source image. The currently verified nutrition and verification counts will not change.{!redundantRationaleReady ? " Add a rationale of at least 3 characters before confirming." : ""}</AlertDialogDescription>
+            <Label htmlFor={"redundant-rationale-" + item.id}>Decision rationale<Textarea id={"redundant-rationale-" + item.id} value={rationale} disabled={working === item.id} onChange={(event) => setRationales((current) => ({ ...current, [item.id]: event.target.value }))} minLength={3} placeholder="Why is this evidence redundant?" /></Label>
+            {actionErrors[item.id] && <ErrorState title="Decision was not saved." description={actionErrors[item.id]} />}
             <div><Button variant="outline" autoFocus className="redundant" disabled={working === item.id || !redundantRationaleReady} onClick={() => void runAction(item.id, () => onResolve(item, "redundant_nutrition", rationale, null, null, null, null)).then((saved) => { if (saved) setConfirmingRedundant(null); })}>Confirm as redundant</Button><AlertDialogCancel className="ghost" disabled={working === item.id}>Cancel</AlertDialogCancel></div>
           </AlertDialogContent></AlertDialog>}</>}
         </Card>
@@ -911,16 +918,18 @@ function completionActionLabel(item: CompletionLedgerItem): string {
   return "Inspect terminal evidence";
 }
 
-export function IdentityEvidenceForm({ item, onVerified, onCancel }: {
+export function IdentityEvidenceForm({ item, onVerified, onCancel, onWorkingChange }: {
   item: CompletionLedgerItem;
   onVerified: () => void;
   onCancel: () => void;
+  onWorkingChange?: (working: boolean) => void;
 }) {
   const sourceUrl = item.sourceUrl?.startsWith("https://") ? item.sourceUrl : "";
   const [evidenceUrl, setEvidenceUrl] = useState(sourceUrl);
   const [rationale, setRationale] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [working, setWorking] = useState(false);
+  useEffect(() => { onWorkingChange?.(working); }, [working, onWorkingChange]);
   const [error, setError] = useState<string | null>(null);
   const sourceRecordId = item.sourceRecordId;
   const fieldId = `identity-evidence-${item.product.id.replace(/[^A-Za-z0-9_-]/g, "-")}`;
@@ -1024,10 +1033,11 @@ function terminalContradictionMessages(
   return messages;
 }
 
-export function TerminalEvidenceForm({ item, onRecorded, onCancel }: {
+export function TerminalEvidenceForm({ item, onRecorded, onCancel, onWorkingChange }: {
   item: CompletionLedgerItem;
   onRecorded: () => void;
   onCancel: () => void;
+  onWorkingChange?: (working: boolean) => void;
 }) {
   const family = item.family === "nutrition" || item.family === "ingredients" ? item.family : null;
   const [options, setOptions] = useState<TerminalEvidenceOptionsResponse | null>(null);
@@ -1037,6 +1047,7 @@ export function TerminalEvidenceForm({ item, onRecorded, onCancel }: {
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
+  useEffect(() => { onWorkingChange?.(working); }, [working, onWorkingChange]);
   const [error, setError] = useState<string | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(terminalIdempotencyKey);
   const [reloadRequest, setReloadRequest] = useState(0);
@@ -1164,16 +1175,17 @@ export function CompletionEvidenceDialog({ item, onCommitted, onClose }: {
   onClose: () => void;
 }) {
   const committed = useRef(false);
+  const [saving, setSaving] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [previousFocus] = useState(() => document.activeElement instanceof HTMLElement ? document.activeElement : null);
   const dialogId = `${item.family}-${item.product.id.replace(/[^A-Za-z0-9_-]/g, "-")}`;
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent showCloseButton={false} className="completion-decision-dialog" onOpenAutoFocus={(event) => { event.preventDefault(); headingRef.current?.focus(); }} onCloseAutoFocus={(event) => { event.preventDefault(); const notice = committed.current ? document.querySelector<HTMLElement>(".completion-commit-notice-success, .completion-commit-notice-refresh_failed") : null; const target = notice ?? (canRestoreDialogFocus(previousFocus) ? previousFocus : document.getElementById("completion-worklist-heading")); if (canRestoreDialogFocus(target)) target.focus(); }} aria-labelledby={`completion-decision-heading-${dialogId}`} aria-describedby={`completion-decision-description-${dialogId}`}>
-        <header><div><p className="eyebrow">Human evidence decision</p><DialogTitle id={`completion-decision-heading-${dialogId}`} ref={headingRef} tabIndex={-1}>{item.family === "identity" ? "Verify" : `Record ${item.family} for`} {item.product.name}</DialogTitle><DialogDescription id={`completion-decision-description-${dialogId}`}>{item.family === "identity" ? "Identity verification is accepted only while this exact source record and normalized identity hash remain current." : "Unavailable is a terminal evidence decision—not a synonym for missing data, failed extraction, or an unreadable label."}</DialogDescription></div><Button variant="ghost" type="button" className="drawer-close" onClick={onClose} aria-label="Close evidence decision">×</Button></header>
+    <Dialog open onOpenChange={(open) => { if (!open && !saving) onClose(); }}>
+      <DialogContent onInteractOutside={(event) => event.preventDefault()} onEscapeKeyDown={(event) => { if (saving) event.preventDefault(); }} showCloseButton={false} className="completion-decision-dialog" onOpenAutoFocus={(event) => { event.preventDefault(); headingRef.current?.focus(); }} onCloseAutoFocus={(event) => { event.preventDefault(); const notice = committed.current ? document.querySelector<HTMLElement>(".completion-commit-notice-success, .completion-commit-notice-refresh_failed") : null; const target = notice ?? (canRestoreDialogFocus(previousFocus) ? previousFocus : document.getElementById("completion-worklist-heading")); if (canRestoreDialogFocus(target)) target.focus(); }} aria-labelledby={`completion-decision-heading-${dialogId}`} aria-describedby={`completion-decision-description-${dialogId}`}>
+        <header><div><p className="eyebrow">Human evidence decision</p><DialogTitle id={`completion-decision-heading-${dialogId}`} ref={headingRef} tabIndex={-1}>{item.family === "identity" ? "Verify" : `Record ${item.family} for`} {item.product.name}</DialogTitle><DialogDescription id={`completion-decision-description-${dialogId}`}>{item.family === "identity" ? "Identity verification is accepted only while this exact source record and normalized identity hash remain current." : "Unavailable is a terminal evidence decision—not a synonym for missing data, failed extraction, or an unreadable label."}</DialogDescription></div><Button variant="ghost" type="button" className="drawer-close" disabled={saving} onClick={onClose} aria-label="Close evidence decision">×</Button></header>
         {item.family === "identity"
-          ? <IdentityEvidenceForm item={item} onVerified={() => { committed.current = true; onCommitted(); }} onCancel={onClose} />
-          : <TerminalEvidenceForm item={item} onRecorded={() => { committed.current = true; onCommitted(); }} onCancel={onClose} />}
+          ? <IdentityEvidenceForm item={item} onVerified={() => { committed.current = true; onCommitted(); }} onCancel={onClose} onWorkingChange={setSaving} />
+          : <TerminalEvidenceForm item={item} onRecorded={() => { committed.current = true; onCommitted(); }} onCancel={onClose} onWorkingChange={setSaving} />}
       </DialogContent>
     </Dialog>
   );
@@ -1663,7 +1675,7 @@ export function App() {
             <div className="result-meta" aria-live="polite"><span>{catalog?.pagination.total.toLocaleString("en-IN") ?? "—"} results</span><small>Missing values stay missing. Unverified values never enter trusted metrics.</small></div>
             {catalogState.loading && <Skeleton className="loading" role="status"><span className="loader" />Querying canonical catalog…</Skeleton>}
             {catalogState.error && <ErrorState title="Catalog unavailable" description={catalogState.error} onRetry={loadCatalog} />}
-            {catalog && !catalogState.loading && !catalogState.error && <CatalogTable data={catalog} onOpen={setSelectedId} onExplore={showDiscovery} page={page} onPage={setPage} />}
+            {catalog && !catalogState.loading && !catalogState.error && <CatalogTable data={catalog} onOpen={setSelectedId} onExplore={() => updateFilters({ ...initialFilters, scope: "all" })} page={page} onPage={setPage} />}
           </>
         )}
         {tab === "reviews" && <><section className="page-head"><p className="eyebrow">Human verification gate</p><h1>Evidence review queue</h1><p>{isPublic ? "Inspect unresolved evidence and decision history. Production decisions remain read-only until operator authentication is in place." : "Resolve conflicts without discarding the original source record."}</p></section>{reviewId && <div className="read-only-notice"><strong>Focused review</strong><span>Showing the exact ledger-linked evidence item.</span><Button variant="ghost" className="ghost" onClick={() => setReviewId(null)}>Return to full queue</Button></div>}<Reviews data={reviews} loading={reviewState.loading} error={reviewState.error} onResolve={resolve} onOpenProduct={setSelectedId} typeFilter={reviewType} statusFilter={reviewStatus} page={reviewPage} onType={(type) => { setReviewId(null); setReviewPage(1); setReviewType(type); }} onStatus={(status) => { setReviewId(null); setReviewPage(1); setReviewStatus(status); }} onPage={setReviewPage} readOnly={isPublic} /></>}
