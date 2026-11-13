@@ -126,6 +126,8 @@ export function FoodApp() {
       .catch((reason: unknown) => { if (controller.signal.aborted) return; setDetailError(reason instanceof Error ? reason.message : "Product could not be loaded."); setDetailLoading(false); });
     return () => controller.abort();
   }, [selected]);
+  const displayedSort = isCatalogSort(String(catalog?.filters.sort)) ? catalog!.filters.sort as CatalogSort : filters.sort;
+  const displayedOrder = catalog?.filters.order === "asc" ? "asc" : "desc";
   return <div className="food-app">
     <a className="skip-link" href="#main">Skip to content</a>
     <header className="food-topbar"><a className="food-wordmark" href="/" onClick={(event) => { event.preventDefault(); navigate("foods"); }}>Food /</a><nav aria-label="Main navigation">{(["foods", "recipes", "sources"] as const).map((item) => <a key={item} href={item === "foods" ? "/" : `/${item}`} aria-current={view === item ? "page" : undefined} onClick={(event) => { if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); navigate(item); }}>{item === "foods" ? "Foods" : item === "recipes" ? "Recipes" : "Data & sources"}</a>)}</nav><a className="food-family" href="https://significanthobbies.com">Significant Hobbies</a></header>
@@ -142,7 +144,7 @@ export function FoodApp() {
         <section className="food-ledger" aria-label="Food nutrition reference" aria-busy={loading}><div className="ledger-heading"><h2>Nutrition reference</h2><p role="status">{loading ? "Loading food records…" : error ? "Could not load records" : `${catalog?.pagination.total.toLocaleString("en-IN") ?? 0} ${catalog?.pagination.total === 1 ? "product" : "products"}`}</p></div>
           {error && <div className="food-error" role="alert"><p>{error}</p><Button variant="outline" onClick={() => setRetry((value) => value + 1)}>Try again</Button></div>}
           {loading && !catalog && <div className="food-loading" role="status">Loading the catalog…</div>}
-          {!error && catalog && <CatalogTable data={catalog} busy={loading} sort={isCatalogSort(String(catalog.filters.sort)) ? catalog.filters.sort as CatalogSort : filters.sort} order={catalog.filters.order === "asc" ? "asc" : "desc"} onSort={(sort) => changeFilters({ sort, order: nextSortOrder(filters.sort, filters.order, sort) })} onOpen={setSelected} onExplore={() => changeFilters({ q: "", category: "all", scope: "all" })} page={catalog.pagination.page} onPage={(next) => { setPage(next); document.querySelector(".food-ledger")?.scrollIntoView({ block: "start" }); }} />}
+          {!error && catalog && <CatalogTable data={catalog} busy={loading} sort={displayedSort} order={displayedOrder} onSort={(sort) => changeFilters({ sort, order: nextSortOrder(displayedSort, displayedOrder, sort) })} onOpen={setSelected} onExplore={() => changeFilters({ q: "", category: "all", scope: "all" })} page={catalog.pagination.page} onPage={(next) => { setPage(next); document.querySelector(".food-ledger")?.scrollIntoView({ block: "start" }); }} />}
         </section>
         <aside className="food-context"><strong>Read with context</strong><p>Open Food Facts is community-contributed. Values can be missing, stale or mismatched. Conflicting nutrition is withheld from protein rankings. Open a product to see its source and observation date. <a href="/sources" onClick={(event) => { event.preventDefault(); navigate("sources"); }}>See the data-quality report</a>.</p></aside>
       </>}

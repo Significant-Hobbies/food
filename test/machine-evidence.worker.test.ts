@@ -63,8 +63,10 @@ describe("machine-verified nutrition evidence", () => {
     const stale = await json<CatalogResponse>(await worker.fetch("http://localhost/api/products?scope=all&verification=unverified&pageSize=100"));
     expect(stale.products.find(({ id }) => id === subject.product_id)?.nutritionStatus).toBe("unverified");
 
+    await env.DB.prepare("UPDATE nutrition_facts SET basis = 'per_serving', carbohydrate_grams = 99 WHERE product_id = ?").bind(subject.product_id).run();
+
     // Distinct current labels can agree on protein/calories while supplying different macros.
-    for (const [suffix, carbs, date] of [["2", 20, "2026-07-20"], ["3", 40, "2026-07-21"]] as const) {
+    for (const [suffix, carbs, date] of [["2", null, "2026-07-20"], ["3", 40, "2026-07-21"]] as const) {
       await env.DB.prepare(`INSERT INTO label_evidence_assets
         (id, subject_source_record_id, subject_source_content_hash, product_id, field_family, source_image_id,
          source_image_revision, requested_url, effective_url, content_sha256, byte_length, media_type, fetched_at)
@@ -85,6 +87,10 @@ describe("machine-verified nutrition evidence", () => {
         FROM machine_nutrition_verifications WHERE id = 'machine-api'`)
         .bind(`agree-verification-${suffix}`, `agree-label-${suffix}`, hash(suffix), carbs,
           hash(suffix), `${date}T00:00:00.000Z`).run();
+      if (suffix === "2") {
+        const mixed = await json<CatalogResponse>(await worker.fetch("http://localhost/api/products?verification=machine_verified&scope=all&sort=carbs&order=desc"));
+        expect(mixed.products[0]).toMatchObject({ id: subject.product_id, nutrition: { basis: "per_100g", carbohydrateGrams: null } });
+      }
     }
     const agreeing = await json<CatalogResponse>(await worker.fetch("http://localhost/api/products?verification=machine_verified&scope=all&sort=carbs&order=desc&pageSize=1"));
     expect(agreeing.pagination.total).toBe(1);

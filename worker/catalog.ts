@@ -210,6 +210,16 @@ const CURRENT_CATALOG_MACHINE_NUTRITION = `(SELECT * FROM (
   ) AS catalog_rank FROM current_machine_verified_nutrition_facts candidate
 ) WHERE catalog_rank = 1)`;
 
+const NUTRITION_BASIS_SQL = "COALESCE(verified_nutrition.basis, machine_nutrition.basis, n.basis)";
+
+// Optional fields may fall back only to facts with the displayed basis.
+// A per-serving or per-ml amount must never inherit another source's per-g label.
+function nutritionAmountSql(column: string, excludeConflicts = false): string {
+  return `COALESCE(verified_nutrition.${column},
+    CASE WHEN machine_nutrition.basis = ${NUTRITION_BASIS_SQL} THEN machine_nutrition.${column} END,
+    CASE WHEN n.basis = ${NUTRITION_BASIS_SQL}${excludeConflicts ? " AND n.status IN ('unverified', 'verified')" : ""} THEN n.${column} END)`;
+}
+
 const SELECT_PRODUCT = `
   SELECT p.id, p.gtin, p.image_url, p.nutrition_image_url, p.brand, p.name, p.flavour, p.category,
     p.net_quantity_grams, p.serving_size_grams, p.marketed_protein,
@@ -233,14 +243,14 @@ const SELECT_PRODUCT = `
     COALESCE(verified_ingredients.evidence_url, ingredient_terminal.evidence_url) AS ingredient_evidence_url,
     COALESCE(verified_ingredients.evidence_kind, ingredient_terminal_decision.evidence_kind) AS ingredient_evidence_kind,
     ingredient_terminal.outcome AS ingredient_terminal_outcome,
-    COALESCE(verified_nutrition.calories, machine_nutrition.calories, n.calories) AS calories,
-    COALESCE(verified_nutrition.protein_grams, machine_nutrition.protein_grams, n.protein_grams) AS protein_grams,
-    COALESCE(verified_nutrition.carbohydrate_grams, machine_nutrition.carbohydrate_grams, n.carbohydrate_grams) AS carbohydrate_grams,
-    COALESCE(verified_nutrition.sugar_grams, machine_nutrition.sugar_grams, n.sugar_grams) AS sugar_grams,
-    COALESCE(verified_nutrition.fat_grams, machine_nutrition.fat_grams, n.fat_grams) AS fat_grams,
-    COALESCE(verified_nutrition.saturated_fat_grams, machine_nutrition.saturated_fat_grams, n.saturated_fat_grams) AS saturated_fat_grams,
-    COALESCE(verified_nutrition.fibre_grams, machine_nutrition.fibre_grams, n.fibre_grams) AS fibre_grams,
-    COALESCE(verified_nutrition.sodium_mg, machine_nutrition.sodium_mg, n.sodium_mg) AS sodium_mg,
+    ${nutritionAmountSql("calories")} AS calories,
+    ${nutritionAmountSql("protein_grams")} AS protein_grams,
+    ${nutritionAmountSql("carbohydrate_grams")} AS carbohydrate_grams,
+    ${nutritionAmountSql("sugar_grams")} AS sugar_grams,
+    ${nutritionAmountSql("fat_grams")} AS fat_grams,
+    ${nutritionAmountSql("saturated_fat_grams")} AS saturated_fat_grams,
+    ${nutritionAmountSql("fibre_grams")} AS fibre_grams,
+    ${nutritionAmountSql("sodium_mg")} AS sodium_mg,
     COALESCE(verified_nutrition.basis, machine_nutrition.basis, n.basis) AS nutrition_basis,
     COALESCE(verified_nutrition.observed_at, machine_nutrition.verified_at, n.observed_at) AS nutrition_observed_at,
     COALESCE(verified_nutrition.label_verified_at, machine_nutrition.verified_at, n.label_verified_at) AS label_verified_at
@@ -343,9 +353,8 @@ export function catalogPageQuery(input: SearchInput) {
   const column = Object.hasOwn(macroColumns, input.sort) ? macroColumns[input.sort] : undefined;
   // Use the same field precedence as displayed facts, excluding conflicting raw
   // candidates. Amounts retain their declared mass/volume basis; no conversion.
-  const key = column ? `CASE WHEN COALESCE(verified_nutrition.basis, machine_nutrition.basis, n.basis) IN ('per_100g', 'per_100ml')
-    THEN COALESCE(verified_nutrition.${column}, machine_nutrition.${column},
-      CASE WHEN n.status IN ('unverified', 'verified') THEN n.${column} END) END` : input.sort === "protein_density" ? "p.sort_protein_density"
+  const key = column ? `CASE WHEN ${NUTRITION_BASIS_SQL} IN ('per_100g', 'per_100ml')
+    THEN ${nutritionAmountSql(column, true)} END` : input.sort === "protein_density" ? "p.sort_protein_density"
     : input.sort === "completeness" ? "p.completeness" : "p.name_normalized";
   const direction = (input.order ?? defaultSortOrder(input.sort)) === "asc" ? "ASC" : "DESC";
   // Keep the default browse orders aligned with their covering indexes. The
