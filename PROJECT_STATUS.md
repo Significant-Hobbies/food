@@ -509,3 +509,5 @@ The public experience combines catalog search, nutrition comparison and product 
 ## 2026-11-13 · Comparison interactions
 
 The owner reported that comparison headings and rows were not clickable. Added globally paginated macro sorting in both directions, header controls with accessible sort state, the equivalent mobile selector, and row/card detail targets. Kept the India-only data scope; production D1 measured 304,377,856 bytes before this change. Missing/conflicting values are ordered last, with declared mass/volume bases preserved.
+
+- 2026-11-13 — Owner chose Open Food Facts as the default public nutrition source. Removed repeated unverified badges from Food rows/cards and used source attribution in details; retained missing/conflict states and source history.
