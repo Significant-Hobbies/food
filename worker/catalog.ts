@@ -202,6 +202,14 @@ const NUTRITION_STATUS_SQL = `CASE
       ELSE n.status
     END`;
 
+// Several agreeing label assets can be current. Choose one complete projection
+// deterministically so they cannot duplicate products or consume page slots.
+const CURRENT_CATALOG_MACHINE_NUTRITION = `(SELECT * FROM (
+  SELECT candidate.*, ROW_NUMBER() OVER (
+    PARTITION BY product_id ORDER BY verified_at DESC, id DESC
+  ) AS catalog_rank FROM current_machine_verified_nutrition_facts candidate
+) WHERE catalog_rank = 1)`;
+
 const SELECT_PRODUCT = `
   SELECT p.id, p.gtin, p.image_url, p.nutrition_image_url, p.brand, p.name, p.flavour, p.category,
     p.net_quantity_grams, p.serving_size_grams, p.marketed_protein,
@@ -243,7 +251,7 @@ const SELECT_PRODUCT = `
   LEFT JOIN ingredient_statements i ON i.product_id = p.id
   LEFT JOIN current_verified_nutrition_facts verified_nutrition
     ON verified_nutrition.product_id = p.id
-  LEFT JOIN current_machine_verified_nutrition_facts machine_nutrition
+  LEFT JOIN ${CURRENT_CATALOG_MACHINE_NUTRITION} machine_nutrition
     ON machine_nutrition.product_id = p.id
   LEFT JOIN current_verified_ingredient_statements verified_ingredients
     ON verified_ingredients.product_id = p.id
@@ -314,7 +322,7 @@ const NUTRITION_JOINS = `
   LEFT JOIN nutrition_facts n ON n.product_id = p.id
   LEFT JOIN current_verified_nutrition_facts verified_nutrition
     ON verified_nutrition.product_id = p.id
-  LEFT JOIN current_machine_verified_nutrition_facts machine_nutrition
+  LEFT JOIN ${CURRENT_CATALOG_MACHINE_NUTRITION} machine_nutrition
     ON machine_nutrition.product_id = p.id`;
 const INGREDIENT_JOINS = `
   LEFT JOIN ingredient_statements i ON i.product_id = p.id
@@ -326,7 +334,7 @@ function filterJoins(input: SearchInput, sortingNutrition = false): string {
     + (input.ingredientVerification !== "all" ? INGREDIENT_JOINS : "");
 }
 
-export async function searchProducts(db: D1Database, input: SearchInput): Promise<CatalogResponse> {
+export function catalogPageQuery(input: SearchInput) {
   const filters = filtersFor(input);
   const macroColumns: Record<string, string> = {
     protein: "protein_grams", carbs: "carbohydrate_grams", fat: "fat_grams",
@@ -335,16 +343,28 @@ export async function searchProducts(db: D1Database, input: SearchInput): Promis
   const column = Object.hasOwn(macroColumns, input.sort) ? macroColumns[input.sort] : undefined;
   // Use the same field precedence as displayed facts, excluding conflicting raw
   // candidates. Amounts retain their declared mass/volume basis; no conversion.
-  const key = column ? `COALESCE(verified_nutrition.${column}, machine_nutrition.${column},
-    CASE WHEN n.status IN ('unverified', 'verified') THEN n.${column} END)` : input.sort === "protein_density" ? "p.sort_protein_density"
+  const key = column ? `CASE WHEN COALESCE(verified_nutrition.basis, machine_nutrition.basis, n.basis) IN ('per_100g', 'per_100ml')
+    THEN COALESCE(verified_nutrition.${column}, machine_nutrition.${column},
+      CASE WHEN n.status IN ('unverified', 'verified') THEN n.${column} END) END` : input.sort === "protein_density" ? "p.sort_protein_density"
     : input.sort === "completeness" ? "p.completeness" : "p.name_normalized";
   const direction = (input.order ?? defaultSortOrder(input.sort)) === "asc" ? "ASC" : "DESC";
-  const order = `${key} ${direction} NULLS LAST, p.name_normalized ASC, p.brand_normalized ASC, p.id ASC`;
+  // Keep the default browse orders aligned with their covering indexes. The
+  // final id makes page ties stable without introducing a full-catalog sort.
+  const order = column ? `${key} ${direction} NULLS LAST, p.name_normalized ASC, p.id ASC`
+    : input.sort === "protein_density" ? `${key} ${direction}${direction === "ASC" ? " NULLS LAST" : ""}, p.name_normalized ASC, p.completeness ASC, p.id ASC`
+    : input.sort === "completeness" ? `${key} ${direction}, p.name_normalized ASC, p.id ASC`
+    : `${key} ${direction}, p.brand_normalized ASC, p.completeness ASC, p.id ASC`;
   const pageJoins = filterJoins(input, Boolean(column));
   const offset = (input.page - 1) * input.pageSize;
   const pageIds = `SELECT p.id FROM products p${pageJoins}${filters.sql} ORDER BY ${order} LIMIT ? OFFSET ?`;
-  const list = db.prepare(`${SELECT_PRODUCT} WHERE p.id IN (${pageIds}) ORDER BY ${order}`)
-    .bind(...filters.bindings, input.pageSize, offset);
+  return { sql: pageIds, order, bindings: [...filters.bindings, input.pageSize, offset], filters };
+}
+
+export async function searchProducts(db: D1Database, input: SearchInput): Promise<CatalogResponse> {
+  const page = catalogPageQuery(input);
+  const { filters } = page;
+  const list = db.prepare(`${SELECT_PRODUCT} WHERE p.id IN (${page.sql}) ORDER BY ${page.order}`)
+    .bind(...page.bindings);
   const count = filters.filtered
     ? db.prepare(`SELECT COUNT(*) AS total FROM products p${filterJoins(input)}${filters.sql}`)
       .bind(...filters.bindings)

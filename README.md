@@ -49,7 +49,7 @@ service licenses that apply independently of this repository's visibility.
 
 ## Comparing products
 
-Click a column heading to sort the entire catalog; click it again to reverse the order. The sort selector offers the same columns and directions on phones. Product rows and cards open source details. Macro sorts keep the declared per-100-g or per-100-ml basis; missing and conflicting values stay last in both directions. API clients use `sort=protein|carbs|fat|fibre|calories|protein_density|name|completeness` and `order=asc|desc`.
+Click a column heading to sort the entire catalog; click it again to reverse the order. The sort selector offers the same columns and directions on phones. Product rows and cards open source details. Macro sorts keep the declared per-100-g or per-100-ml basis; missing, conflicting, per-serving and unknown-basis values stay last in both directions. API clients use `sort=protein|carbs|fat|fibre|calories|protein_density|name|completeness` and `order=asc|desc`.
 
 ## Local development
 

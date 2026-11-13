@@ -354,8 +354,9 @@ function ClassificationBadges({ product }: { product: CatalogProduct }) {
   );
 }
 
-export function CatalogTable({ data, onOpen, onExplore, page, onPage, sort, order = "desc", onSort }: {
+export function CatalogTable({ data, onOpen, onExplore, page, onPage, sort, order = "desc", onSort, busy = false }: {
   data: CatalogResponse;
+  busy?: boolean;
   sort?: CatalogSort;
   order?: SortOrder;
   onSort?: (sort: CatalogSort) => void;
@@ -385,7 +386,7 @@ export function CatalogTable({ data, onOpen, onExplore, page, onPage, sort, orde
             </th> )}
           </tr>
         </thead>
-        <tbody>
+        <tbody inert={busy}>
           {data.products.map((product) => (
             <tr key={product.id} className="product-row" onClick={(event) => { if ((event.target as HTMLElement).closest("button, a") || window.getSelection()?.toString()) return; event.currentTarget.querySelector<HTMLButtonElement>("button")?.focus(); onOpen(product.id); }}>
               <td className="product-cell">
@@ -402,7 +403,7 @@ export function CatalogTable({ data, onOpen, onExplore, page, onPage, sort, orde
         </tbody>
         </table>
       </div>
-      <div className="catalog-mobile" aria-label="Catalog products">
+      <div className="catalog-mobile" aria-label="Catalog products" inert={busy}>
         {data.products.map((product) => (
           <article className="product-card" key={product.id} onClick={(event) => { if ((event.target as HTMLElement).closest("button, a") || window.getSelection()?.toString()) return; event.currentTarget.querySelector<HTMLButtonElement>("button")?.focus(); onOpen(product.id); }}>
             <button className="product-card-main" onClick={() => onOpen(product.id)}>
@@ -418,7 +419,7 @@ export function CatalogTable({ data, onOpen, onExplore, page, onPage, sort, orde
           </article>
         ))}
       </div>
-      {data.pagination.pages > 1 && <nav className="pagination" aria-label="Catalog pages"><button disabled={page <= 1} onClick={() => onPage(page - 1)}>← Previous</button><span>Page <strong>{page}</strong> of {data.pagination.pages.toLocaleString("en-IN")}</span><button disabled={page >= data.pagination.pages} onClick={() => onPage(page + 1)}>Next →</button></nav>}
+      {data.pagination.pages > 1 && <nav className="pagination" aria-label="Catalog pages"><button disabled={busy || page <= 1} onClick={() => onPage(page - 1)}>← Previous</button><span>Page <strong>{page}</strong> of {data.pagination.pages.toLocaleString("en-IN")}</span><button disabled={busy || page >= data.pagination.pages} onClick={() => onPage(page + 1)}>Next →</button></nav>}
     </>
   );
 }

@@ -1,5 +1,6 @@
 import { env, exports } from "cloudflare:workers";
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
+import { catalogPageQuery, validateSearch } from "../worker/catalog";
 import type { CatalogResponse } from "../shared/api";
 
 const worker = exports.default;
@@ -27,6 +28,34 @@ async function catalog(params: string): Promise<CatalogResponse> {
   return response.json() as Promise<CatalogResponse>;
 }
 describe("global catalog sorting", () => {
+  it.each([["protein_density", "idx_products_active_density"], ["name", "idx_products_active_name"], ["completeness", "idx_products_active_completeness"]])("keeps the default %s page covered by its index", async (sort, index) => {
+    const input = validateSearch(new URLSearchParams({ sort })).value!;
+    const query = catalogPageQuery(input);
+    const plan = await env.DB.prepare(`EXPLAIN QUERY PLAN ${query.sql}`).bind(...query.bindings).all<{ detail: string }>();
+    const details = plan.results.map((row) => row.detail).join("\n");
+    expect(details).toContain(`COVERING INDEX ${index}`);
+    expect(details).not.toContain("TEMP B-TREE");
+  });
+  it("places serving and unknown bases last without treating them as per-100 amounts", async () => {
+    const cases = [["basis_known", "per_100g", 10], ["basis_serving", "per_serving", 90], ["basis_unknown", "unknown", 99]] as const;
+    try {
+      for (const [id, basis, protein] of cases) {
+        await env.DB.prepare(`INSERT INTO products (id, brand, brand_normalized, name, name_normalized, category, classifier_version, created_at, updated_at)
+          VALUES (?, 'Basis fixture', 'basis fixture', ?, ?, 'other', 'fixture', '2026-11-13', '2026-11-13')`).bind(id, id, `basis comparison ${id}`).run();
+        await env.DB.prepare(`INSERT INTO nutrition_facts (product_id, status, confidence, authority, basis, preparation_state, calories, protein_grams, observed_at, updated_at)
+          VALUES (?, 'unverified', 'low', 40, ?, 'as_sold', 400, ?, '2026-11-13', '2026-11-13')`).bind(id, basis, protein).run();
+      }
+      for (const order of ["asc", "desc"]) {
+        const r = await worker.fetch(`http://localhost/api/products?q=basis%20comparison&scope=all&sort=protein&order=${order}`);
+        const body = await r.json() as CatalogResponse;
+        expect(body.products.map((row) => row.id)).toEqual(["basis_known", "basis_serving", "basis_unknown"]);
+        expect(body.products.find((row) => row.id === "basis_serving")?.nutrition.basis).toBe("per_serving");
+      }
+    } finally {
+      for (const [id] of cases) await env.DB.prepare("DELETE FROM products WHERE id = ?").bind(id).run();
+    }
+  });
+
   it.each(["protein", "carbs", "fat", "fibre", "calories"])("sorts %s across pages in both directions, with zero valid and conflicts/missing last", async (sort) => {
     for (const order of ["asc", "desc"]) {
       const pages = await Promise.all([1, 2, 3].map((page) => catalog(`sort=${sort}&order=${order}&pageSize=2&page=${page}`)));
