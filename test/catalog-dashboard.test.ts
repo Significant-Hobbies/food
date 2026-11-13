@@ -1,9 +1,10 @@
 // @vitest-environment happy-dom
+import { ProductEvidence } from "../src/ProductDrawer";
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { ProductDrawer, CatalogTable, HeaderProductLookup, lookupDestination } from "../src/App";
+import { CatalogTable, HeaderProductLookup, lookupDestination } from "../src/App";
 import type { CatalogProduct, CatalogResponse, ProductDetailResponse } from "../shared/api";
 import { calculateMetrics } from "../shared/metrics";
 
@@ -181,7 +182,7 @@ function renderDetail(overrides: Partial<ProductDetailResponse> = {}): string {
     additives: [], nutrients: [], ratings: [], provenance: [], completenessMissing: [], openReviewCount: 0,
     ...overrides,
   };
-  return renderToStaticMarkup(createElement(ProductDrawer, { detail, loading: false, error: null, onClose: () => undefined }));
+  return renderToStaticMarkup(createElement(ProductEvidence, { detail }));
 }
 
 describe("product detail evidence", () => {

@@ -1,34 +1,31 @@
+import { Button } from "@saas-maker/ui/atoms/button";
+import { Label } from "@saas-maker/ui/atoms/label";
+import { Card, CardHeader, CardTitle } from "@saas-maker/ui/atoms/card";
+import { Skeleton } from "@saas-maker/ui/atoms/skeleton";
+import { NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuLink } from "@saas-maker/ui/molecules/navigation-menu";
 import { ErrorState } from "@saas-maker/ui/molecules/error-state";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@saas-maker/ui/atoms/table";
 import { NativeSelect } from "@saas-maker/ui/atoms/native-controls";
 import { Component, lazy, Suspense, type ReactNode, useEffect, useState } from "react";
-import { Button } from "@saas-maker/ui/atoms/button";
 import { Input } from "@saas-maker/ui/atoms/input";
-import { CatalogTable, ProductDrawer } from "./Catalog";
+import { CatalogTable } from "./Catalog";
 import { api } from "./api";
 import { CATALOG_SORTS, defaultSortOrder, isCatalogSort, nextSortOrder, type CatalogSort, type SortOrder } from "../shared/catalog-sort";
+const ProductDrawer = lazy(() => import("./ProductDrawer").then((module) => ({ default: module.ProductDrawer })));
+const Sources = lazy(() => import("./Sources").then((module) => ({ default: module.Sources })));
 const Recipes = lazy(() => import("./Recipes").then((module) => ({ default: module.Recipes })));
 import type { CatalogResponse, ProductDetailResponse } from "../shared/api";
 
-class RecipeBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+class RecipeBoundary extends Component<{ children: ReactNode; name?: string }, { failed: boolean }> {
   override state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
   override render() {
-    return this.state.failed ? <ErrorState title="Recipes couldn’t load" description="Check your connection and reload the recipes." onRetry={() => window.location.reload()} /> : this.props.children;
+    return this.state.failed ? <ErrorState title={(this.props.name ?? "Recipes") + " couldn’t load"} description="Check your connection and reload this section." onRetry={() => window.location.reload()} /> : this.props.children;
   }
 }
 
 type View = "foods" | "recipes" | "sources";
 type Filters = { q: string; category: string; scope: string; sort: CatalogSort; order: SortOrder };
-type Quality = {
-  source: string; sourceUpdatedAt: string; preparedAt: string;
-  recordsRead: number; indiaRecords: number; stagedRecords: number; excludedRecords: number;
-  canonicalProducts: number; usableNutrition: number; completeCoreMacros: number; withIngredients: number;
-  nutritionConflicts: number; missingNutrition: number; withLabelImage: number;
-  duplicateBarcodes: number; kilojouleConversions: number; sourceErrors: number;
-  downloadPath: string; limitations: string[];
-  labelSpotChecks: Array<{ code: string; sourceUrl: string; result: string; note: string }>;
-};
+
 
 function currentView(): View {
   return window.location.pathname === "/recipes" ? "recipes" : window.location.pathname === "/sources" ? "sources" : "foods";
@@ -41,48 +38,6 @@ function readFilters(): Filters {
   const rawOrder = query.get("order");
   const order = rawOrder === "asc" || rawOrder === "desc" ? rawOrder : defaultSortOrder(sort);
   return { q: query.get("q") ?? "", category: query.get("category") ?? "all", scope: query.get("scope") ?? "all", sort, order };
-}
-
-function Sources() {
-  const [quality, setQuality] = useState<Quality | null>(null);
-  const [error, setError] = useState(false);
-  const load = () => {
-    setError(false);
-    fetch("/api/data-quality").then(async (response) => {
-      if (!response.ok) throw new Error("Quality report unavailable");
-      setQuality(await response.json() as Quality);
-    }).catch(() => setError(true));
-  };
-  useEffect(load, []);
-  return <section className="sources-page">
-    <h1>Know what’s behind the numbers.</h1>
-    <p className="lede">Open Food Facts is the only source for packaged-food nutrition. Recipes use estimates from their original publishers. Source links, observation dates and data checks are available below.</p>
-    {error && <div className="food-error" role="alert"><p>The quality report could not be loaded.</p><Button variant="outline" onClick={load}>Try again</Button></div>}
-    {!quality && !error && <p role="status">Loading the snapshot report…</p>}
-    {quality && <>
-      <dl className="source-meta"><div><dt>Food source</dt><dd><a href="https://world.openfoodfacts.org/data" target="_blank" rel="noreferrer">Open Food Facts bulk export</a></dd></div><div><dt>Latest source edit</dt><dd>{quality.sourceUpdatedAt.slice(0, 10)}</dd></div><div><dt>Prepared snapshot</dt><dd>{quality.preparedAt.slice(0, 10)}</dd></div><div><dt>Scope</dt><dd>Products tagged as sold in India</dd></div></dl>
-      <h2>What the snapshot contains</h2>
-      <Table className="quality-table"><TableHeader><TableRow><TableHead>Check</TableHead><TableHead>Records</TableHead><TableHead>What it means</TableHead></TableRow></TableHeader><TableBody>{[
-        ["Global rows in snapshot", quality.recordsRead, "The source Parquet metadata row count; all India-tagged rows were queried."],
-        ["India-tagged source rows", quality.indiaRecords, "Country tags are contributor-provided; they do not prove current availability."],
-        ["Accepted source records", quality.stagedRecords, "Named records retained with their original source and observations."],
-        ["Excluded source rows", quality.excludedRecords, "Missing identity, obsolete or duplicate source records, with reasons retained."],
-        ["Canonical products", quality.canonicalProducts, "GTIN matching deduplicates source records. Ambiguous identity is not silently merged."],
-        ["Usable calories + protein", quality.usableNutrition, "Positive calories and protein present, after numeric conflict checks."],
-        ["Five core macros present", quality.completeCoreMacros, "Calories, protein, carbohydrate, fat and fibre are recorded; quality is separate from completeness."],
-        ["Ingredient statements", quality.withIngredients, "Source-provided text, not an allergen guarantee."],
-        ["Nutrition conflicts", quality.nutritionConflicts, "Failed numeric or source quality checks. Withheld from protein rankings."],
-        ["Nutrition missing", quality.missingNutrition, "Neither calories nor protein is recorded. Missing is never converted to zero."],
-        ["Nutrition label images", quality.withLabelImage, "A source image link exists. Presence does not establish a match or verification."],
-        ["kJ conversions", quality.kilojouleConversions, "Calories derived only when kcal is absent, using 1 kcal = 4.184 kJ."],
-      ].map(([label, count, meaning]) => <TableRow key={String(label)}><TableHead scope="row">{label}</TableHead><TableCell>{Number(count).toLocaleString("en-IN")}</TableCell><TableCell>{meaning}</TableCell></TableRow>)}</TableBody></Table>
-      <h2>Selected label spot checks</h2><p>Three selected examples were visually compared with their source images. This is not a random sample or a catalog-wide accuracy estimate. Flagged records remain conflicts; no record was promoted to human-verified.</p><ul className="source-limits">{quality.labelSpotChecks.map((check) => <li key={check.code}><a href={check.sourceUrl} target="_blank" rel="noreferrer">{check.code}</a> · {check.result.replaceAll("_", " ")}. {check.note}</li>)}</ul>
-      <h2>Limits to keep in mind</h2><ul className="source-limits">{quality.limitations.map((limit) => <li key={limit}>{limit}</li>)}</ul>
-      <p><a href={quality.downloadPath} download>Download the attributed food snapshot</a> · <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noreferrer">Open Database License</a>. Product images have separate rights, including Open Food Facts’ <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noreferrer">CC BY-SA</a> terms.</p>
-    </>}
-    <h2>Recipes are a separate collection</h2><p>50 egg-free vegetarian recipes from 14 original publishers, collected on 15 August 2026. Nutrition is the publisher’s estimate for its stated serving. Food labels use a per-100-g or per-100-ml basis; recipe servings are not treated as the same portion. Read the original recipe for instructions and current details.</p>
-    <p><a href="/data/recipe-video-archive.json" download>Download the retained video-recipe archive</a>. This historical collection is separate from the 50 curated recipes and their admission criteria.</p>
-  </section>;
 }
 
 export function FoodApp() {
@@ -146,29 +101,29 @@ export function FoodApp() {
   const displayedSort = isCatalogSort(String(catalog?.filters.sort)) ? catalog!.filters.sort as CatalogSort : filters.sort;
   const displayedOrder = catalog?.filters.order === "asc" ? "asc" : "desc";
   return <div className="food-app">
-    <a className="skip-link" href="#main">Skip to content</a>
-    <header className="food-topbar"><a className="food-wordmark" href="/" onClick={(event) => { event.preventDefault(); navigate("foods"); }}>Food /</a><nav aria-label="Main navigation">{(["foods", "recipes", "sources"] as const).map((item) => <a key={item} href={item === "foods" ? "/" : `/${item}`} aria-current={view === item ? "page" : undefined} onClick={(event) => { if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); navigate(item); }}>{item === "foods" ? "Foods" : item === "recipes" ? "Recipes" : "Data & sources"}</a>)}</nav><a className="food-family" href="https://significanthobbies.com">Significant Hobbies</a></header>
+    <Button asChild variant="link" className="h-auto whitespace-normal text-left"><a className="skip-link" href="#main">Skip to content</a></Button>
+    <header className="food-topbar"><Button asChild variant="link" className="h-auto whitespace-normal text-left"><a className="food-wordmark" href="/" onClick={(event) => { event.preventDefault(); navigate("foods"); }}>Food /</a></Button><NavigationMenu viewport={false} aria-label="Main navigation" className="food-navigation"><NavigationMenuList>{(["foods", "recipes", "sources"] as const).map((item) => <NavigationMenuItem key={item}><NavigationMenuLink active={view === item} href={item === "foods" ? "/" : `/${item}`} aria-current={view === item ? "page" : undefined} onClick={(event) => { if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); navigate(item); }}>{item === "foods" ? "Foods" : item === "recipes" ? "Recipes" : "Data & sources"}</NavigationMenuLink></NavigationMenuItem>)}</NavigationMenuList></NavigationMenu><Button asChild variant="link" className="h-auto whitespace-normal text-left"><a className="food-family" href="https://significanthobbies.com">Significant Hobbies</a></Button></header>
     <main id="main" className="food-main">
       {view === "foods" && <>
         <section className="food-intro"><div><h1>Compare the label.</h1><p>A food reference for Indian shoppers. Search packaged products, compare nutrition on the same basis, and trace every record to its source.</p></div><p className="basis-key"><strong>Keep the basis in view</strong>Food facts per 100 g or 100 ml<br />Recipes per stated serving</p></section>
         <form className="food-filters" role="search" onSubmit={(event) => event.preventDefault()}>
-          <label className="food-search" htmlFor="food-search"><span className="sr-only">Search foods, brands or barcodes</span><Input id="food-search" type="search" value={filters.q} onChange={(event) => changeFilters({ q: event.target.value })} placeholder="Search a food, brand or barcode" /></label>
-          <label htmlFor="food-category"><span className="sr-only">Category</span><NativeSelect id="food-category" value={filters.category} onChange={(event) => changeFilters({ category: event.target.value })}><option value="all">All categories</option>{Object.entries({ protein_powder: "Protein powders", protein_bar: "Protein bars", protein_snack: "Protein snacks", soy_product: "Soy & tofu", dairy: "Dairy", plant_dairy: "Plant dairy", ready_to_drink: "Drinks", breakfast: "Breakfast", spread: "Spreads", other: "Other foods" }).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</NativeSelect></label>
-          <label htmlFor="food-scope"><span className="sr-only">Food scope</span><NativeSelect id="food-scope" value={filters.scope} onChange={(event) => changeFilters({ scope: event.target.value })}><option value="all">All foods</option><option value="protein">Protein foods</option><option value="protein_branded">Protein-branded foods</option></NativeSelect></label>
-          <label htmlFor="food-sort"><span className="sr-only">Sort foods</span><NativeSelect id="food-sort" aria-label="Sort foods" value={`${filters.sort}:${filters.order}`} onChange={(event) => { const [sort, order] = event.target.value.split(":"); if (sort && isCatalogSort(sort) && (order === "asc" || order === "desc")) changeFilters({ sort, order }); }}>{CATALOG_SORTS.map((sort) => <optgroup key={sort.key} label={sort.label}>{(["desc", "asc"] as const).map((order) => <option key={order} value={`${sort.key}:${order}`}>{sort.label} · {sort.key === "name" ? order === "asc" ? "A–Z" : "Z–A" : order === "asc" ? "low to high" : "high to low"}</option>)}</optgroup>)}</NativeSelect></label>
+          <Label className="food-search" htmlFor="food-search"><span className="sr-only">Search foods, brands or barcodes</span><Input id="food-search" type="search" value={filters.q} onChange={(event) => changeFilters({ q: event.target.value })} placeholder="Search a food, brand or barcode" /></Label>
+          <Label htmlFor="food-category"><span className="sr-only">Category</span><NativeSelect id="food-category" value={filters.category} onChange={(event) => changeFilters({ category: event.target.value })}><option value="all">All categories</option>{Object.entries({ protein_powder: "Protein powders", protein_bar: "Protein bars", protein_snack: "Protein snacks", soy_product: "Soy & tofu", dairy: "Dairy", plant_dairy: "Plant dairy", ready_to_drink: "Drinks", breakfast: "Breakfast", spread: "Spreads", other: "Other foods" }).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</NativeSelect></Label>
+          <Label htmlFor="food-scope"><span className="sr-only">Food scope</span><NativeSelect id="food-scope" value={filters.scope} onChange={(event) => changeFilters({ scope: event.target.value })}><option value="all">All foods</option><option value="protein">Protein foods</option><option value="protein_branded">Protein-branded foods</option></NativeSelect></Label>
+          <Label htmlFor="food-sort"><span className="sr-only">Sort foods</span><NativeSelect id="food-sort" aria-label="Sort foods" value={`${filters.sort}:${filters.order}`} onChange={(event) => { const [sort, order] = event.target.value.split(":"); if (sort && isCatalogSort(sort) && (order === "asc" || order === "desc")) changeFilters({ sort, order }); }}>{CATALOG_SORTS.map((sort) => <optgroup key={sort.key} label={sort.label}>{(["desc", "asc"] as const).map((order) => <option key={order} value={`${sort.key}:${order}`}>{sort.label} · {sort.key === "name" ? order === "asc" ? "A–Z" : "Z–A" : order === "asc" ? "low to high" : "high to low"}</option>)}</optgroup>)}</NativeSelect></Label>
         </form>
         <p className="food-sort-note">Sorts cover all results. Missing, conflicting or non-comparable amounts stay last.</p>
-        <section className="food-ledger" aria-label="Food nutrition reference" aria-busy={searching}><div className="ledger-heading"><h2>Nutrition reference</h2><p role="status">{searching ? "Loading food records…" : error ? "Could not load records" : `${catalog?.pagination.total.toLocaleString("en-IN") ?? 0} ${catalog?.pagination.total === 1 ? "product" : "products"}`}</p></div>
-          {error && <div className="food-error" role="alert"><p>{error}</p><Button variant="outline" onClick={() => setRetry((value) => value + 1)}>Try again</Button></div>}
-          {searching && !catalog && <div className="food-loading" role="status">Loading the catalog…</div>}
+        <Card className="food-ledger gap-0 rounded-none py-0" aria-label="Food nutrition reference" aria-busy={searching}><CardHeader className="ledger-heading"><CardTitle role="heading" aria-level={2}>Nutrition reference</CardTitle><p role="status">{searching ? "Loading food records…" : error ? "Could not load records" : `${catalog?.pagination.total.toLocaleString("en-IN") ?? 0} ${catalog?.pagination.total === 1 ? "product" : "products"}`}</p></CardHeader>
+          {error && <ErrorState title="Food records could not be loaded" description={error} onRetry={() => setRetry((value) => value + 1)} />}
+          {searching && !catalog && <Skeleton className="h-48 w-full" role="status" aria-label="Loading the catalog…" />}
           {!error && catalog && <CatalogTable showUnverifiedStatus={false} data={catalog} busy={searching} sort={displayedSort} order={displayedOrder} onSort={(sort) => changeFilters({ sort, order: nextSortOrder(displayedSort, displayedOrder, sort) })} onOpen={setSelected} onExplore={() => changeFilters({ q: "", category: "all", scope: "all" })} page={catalog.pagination.page} onPage={(next) => { setPage(next); document.querySelector(".food-ledger")?.scrollIntoView({ block: "start" }); }} />}
-        </section>
-        <aside className="food-context"><strong>Packaged-food data: Open Food Facts</strong><p>Open a product to see its source and observation date. Missing and conflicting values are flagged. <a href="/sources" onClick={(event) => { event.preventDefault(); navigate("sources"); }}>See the data-quality report</a>.</p></aside>
+        </Card>
+        <aside className="food-context"><strong>Packaged-food data: Open Food Facts</strong><p>Open a product to see its source and observation date. Missing and conflicting values are flagged. <Button asChild variant="link" className="h-auto whitespace-normal text-left"><a href="/sources" onClick={(event) => { event.preventDefault(); navigate("sources"); }}>See the data-quality report</a></Button>.</p></aside>
       </>}
-      {view === "recipes" && <RecipeBoundary><Suspense fallback={<p role="status">Loading recipes…</p>}><Recipes /></Suspense></RecipeBoundary>}
-      {view === "sources" && <Sources />}
+      {view === "recipes" && <RecipeBoundary><Suspense fallback={<Skeleton className="h-48 w-full" role="status" aria-label="Loading recipes…" />}><Recipes /></Suspense></RecipeBoundary>}
+      {view === "sources" && <RecipeBoundary name="Data & sources"><Suspense fallback={<Skeleton className="h-48 w-full" role="status" aria-label="Loading data & sources…" />}><Sources /></Suspense></RecipeBoundary>}
     </main>
-    <footer className="food-footer"><span>Food by Significant Hobbies</span><span><a href="https://world.openfoodfacts.org" target="_blank" rel="noreferrer">Open Food Facts</a> · <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noreferrer">ODbL</a> · <a href="https://github.com/Significant-Hobbies/food">Source code</a></span></footer>
-    {selected && <ProductDrawer showUnverifiedStatus={false} detail={detail} loading={detailLoading} error={detailError} onClose={() => setSelected(null)} />}
+    <footer className="food-footer"><span>Food by Significant Hobbies</span><span><Button asChild variant="link" className="h-auto whitespace-normal text-left"><a href="https://world.openfoodfacts.org" target="_blank" rel="noreferrer">Open Food Facts</a></Button> · <Button asChild variant="link" className="h-auto whitespace-normal text-left"><a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noreferrer">ODbL</a></Button> · <Button asChild variant="link" className="h-auto whitespace-normal text-left"><a href="https://github.com/Significant-Hobbies/food">Source code</a></Button></span></footer>
+    {selected && <RecipeBoundary key={selected} name="Product details"><Suspense fallback={<Skeleton role="status" aria-label="Opening product…" className="h-12 w-full" />}><ProductDrawer showUnverifiedStatus={false} detail={detail} loading={detailLoading} error={detailError} onClose={() => setSelected(null)} /></Suspense></RecipeBoundary>}
   </div>;
 }
