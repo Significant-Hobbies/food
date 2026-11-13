@@ -1,8 +1,8 @@
 # Food
 
-Food compares packaged foods sold in India using Open Food Facts, alongside 50 source-linked vegetarian recipes. Public home: https://food.significanthobbies.com. Source: https://github.com/Significant-Hobbies/food.
+Food compares packaged foods sold in India using Open Food Facts as its only packaged-food data source, alongside 50 source-linked vegetarian recipes. Public home: https://food.significanthobbies.com. Source: https://github.com/Significant-Hobbies/food.
 
-The owner-selected Label Desk interface uses the shared UI library. Community nutrition remains unverified; missing data and conflicts stay visible. See `/sources` and `/api/data-quality` for the exact snapshot and its limits. The surviving repository retains the Protein Index engine and recovery history; Recipe Index is imported under `archives/recipe-index`.
+The owner-selected Label Desk interface uses the shared UI library. Open Food Facts nutrition is accepted as source data; missing data and conflicts stay visible. The public interface uses source attribution rather than repeated unverified badges. See `/sources` and `/api/data-quality` for the exact snapshot and its limits. The surviving repository retains the Protein Index engine and recovery history; Recipe Index is imported under `archives/recipe-index`.
 
 ## Current local workflow
 
@@ -18,7 +18,7 @@ python3 scripts/build-food-snapshot.py /path/to/snapshot /path/to/parquet-output
 
 The supplied file is read-only. Extraction retains a SHA-256 identity, queries the full India country slice with DuckDB, preserves original localized text/nutrients, and creates a separate JSONL input. Staging validates identity, source flags, numeric consistency, dimensional bases and exact label mismatch candidates. The public source download is ODbL; the code MIT license does not relicense external recipe or image content.
 
-After checks and review, `pnpm data:publish --input /path/to/snapshot --remote --confirm-remote` uses the explicit Food config and separate publication gate. `pnpm build` generates `dist/food/wrangler.json`; deploy that generated config with an exact source tag. Existing evidence workflows remain distinct from deployment. Historical documentation below describes the inherited engine and does not override this current product scope.
+After checks and review, `pnpm data:publish --input /path/to/snapshot --remote --confirm-remote` uses the explicit Food config and separate publication gate. `pnpm build` generates `dist/food/wrangler.json`; deploy that generated config with an exact source tag. Existing evidence workflows remain distinct from deployment. Legacy brand discovery and brand publication workflows are disabled; retained adapters are historical tooling, not additional Food data sources. Historical documentation below describes the inherited engine and does not override this current product scope.
 
 ---
 

@@ -10,4 +10,4 @@ Run `pnpm check`, `python3 test/test_off_parquet.py` and `pnpm docs:validate` fo
 
 Sorting follow-up checks: 359 unit and 83 Worker tests pass, including covering-index plans, non-comparable serving bases and deterministic duplicate-machine evidence. Default density page remains 25 D1 rows read for 25 products. Delayed-request interaction and phone/tablet/desktop checks pass. Independent review and live release proof are tracked in PR #10.
 
-13 November 2026: the public Food interface accepts Open Food Facts as its default nutrition source. Ordinary rows/cards omit repeated unverified labels, and details show source attribution. Missing/conflict states, source dates and internal evidence records remain available.
+13 November 2026: the public Food interface accepts Open Food Facts as its only packaged-food nutrition source. Ordinary rows/cards omit repeated unverified labels, and details show source attribution. Missing/conflict states, source dates and internal evidence records remain available.

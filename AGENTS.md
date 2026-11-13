@@ -12,6 +12,8 @@ Canonical GTIN products; separate marketed and nutrition-derived protein
 classification; source-aware nutrition, ingredients, offers, ratings; evidence-
 first comparisons with strict Trusted / Discovery boundaries.
 
+Open Food Facts is the only packaged-food data source. Retained brand adapters and disabled brand workflows are historical tooling; do not re-enable them as additional Food sources. Recipes retain their original publisher attribution.
+
 - **Stack:** Vite + React + Cloudflare Workers + D1 + R2
 - **Package manager:** pnpm
 - **Local dev:** `pnpm dev`

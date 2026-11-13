@@ -2,14 +2,14 @@ name: Official brand discovery
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "19 3 * * 1"
 
 permissions:
   contents: read
 
 jobs:
   catalog:
+    # Food uses Open Food Facts exclusively; retain this legacy workflow as history.
+    if: ${{ false }}
     name: ${{ matrix.name }} catalog snapshot
     runs-on: ubuntu-latest
     timeout-minutes: ${{ matrix.timeout_minutes || 15 }}

@@ -22,6 +22,8 @@ concurrency:
 
 jobs:
   authorize:
+    # Food uses Open Food Facts exclusively; brand publication is retired.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}
@@ -42,7 +44,7 @@ jobs:
 
   publish:
     needs: authorize
-    if: needs.authorize.outputs.approved == 'true'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     environment: production

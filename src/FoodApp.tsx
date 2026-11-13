@@ -45,7 +45,7 @@ function Sources() {
   useEffect(load, []);
   return <section className="sources-page">
     <h1>Know what’s behind the numbers.</h1>
-    <p className="lede">Nutrition from Open Food Facts and recipes from their original publishers. Source links, observation dates and data checks are available below.</p>
+    <p className="lede">Open Food Facts is the only source for packaged-food nutrition. Recipes use estimates from their original publishers. Source links, observation dates and data checks are available below.</p>
     {error && <div className="food-error" role="alert"><p>The quality report could not be loaded.</p><Button variant="outline" onClick={load}>Try again</Button></div>}
     {!quality && !error && <p role="status">Loading the snapshot report…</p>}
     {quality && <>
@@ -146,7 +146,7 @@ export function FoodApp() {
           {loading && !catalog && <div className="food-loading" role="status">Loading the catalog…</div>}
           {!error && catalog && <CatalogTable showUnverifiedStatus={false} data={catalog} busy={loading} sort={displayedSort} order={displayedOrder} onSort={(sort) => changeFilters({ sort, order: nextSortOrder(displayedSort, displayedOrder, sort) })} onOpen={setSelected} onExplore={() => changeFilters({ q: "", category: "all", scope: "all" })} page={catalog.pagination.page} onPage={(next) => { setPage(next); document.querySelector(".food-ledger")?.scrollIntoView({ block: "start" }); }} />}
         </section>
-        <aside className="food-context"><strong>Data from Open Food Facts</strong><p>Open a product to see its source and observation date. Missing and conflicting values are flagged. <a href="/sources" onClick={(event) => { event.preventDefault(); navigate("sources"); }}>See the data-quality report</a>.</p></aside>
+        <aside className="food-context"><strong>Packaged-food data: Open Food Facts</strong><p>Open a product to see its source and observation date. Missing and conflicting values are flagged. <a href="/sources" onClick={(event) => { event.preventDefault(); navigate("sources"); }}>See the data-quality report</a>.</p></aside>
       </>}
       {view === "recipes" && <Recipes />}
       {view === "sources" && <Sources />}
