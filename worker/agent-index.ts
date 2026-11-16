@@ -8,6 +8,7 @@
  */
 
 import { FOOD_BROWSER_ANALYTICS, shouldInstallFoodAnalytics } from "../shared/browser-analytics";
+import { foodCaptureHtml } from "../shared/capture-footer";
 
 const ORIGIN: string = FOOD_BROWSER_ANALYTICS.origin;
 
@@ -325,5 +326,5 @@ ${analytics}
 <section class="facts" aria-label="Macro comparison">${facts.map(([label, value, unit]) => `<div class="fact"><span>${escapeHtml(label)}</span><strong>${escapeHtml(displayValue(value, unit))}</strong></div>`).join("")}</section>
 <section class="evidence" aria-label="Evidence state"><div class="state"><span>Nutrition evidence</span><strong>${escapeHtml(product.nutritionStatus ?? "missing")}</strong></div><div class="state"><span>Ingredient evidence</span><strong>${escapeHtml(product.ingredientStatus ?? "missing")}</strong></div></section>
 <p class="note">Discovery values remain visibly distinct from Trusted evidence. Missing values are not estimates. <a href="${escapeHtml(identity.path)}.md">Read the Markdown version</a> or <a href="/api/products/${encodeURIComponent(identity.id)}">view JSON</a>.</p>
-</main></body></html>`;
+</main>${requestUrl ? foodCaptureHtml(requestUrl) : ""}</body></html>`;
 }

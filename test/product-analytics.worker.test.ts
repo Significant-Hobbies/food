@@ -2,6 +2,7 @@ import { env, exports } from "cloudflare:workers";
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { FOOD_BROWSER_ANALYTICS, FOOD_PUBLIC_HTML_HEADERS } from "../shared/browser-analytics";
+import { FOOD_FOOTER_ID, FOOD_FOOTER_RUNTIME } from "../shared/capture-footer";
 import handler from "../worker/index";
 
 const worker = exports.default;
@@ -20,7 +21,11 @@ describe("Worker-rendered product analytics", () => {
     expect(html).toContain('src="https://health.sassmaker.com/tracker.js"');
     expect(html).toContain('data-identity="session"');
     expect(html).not.toContain("private-query");
-    expect(html.match(/<script[^>]+src=/g)).toHaveLength(1);
+    expect(html.match(/src="https:\/\/health\.sassmaker\.com\/tracker\.js"/g)).toHaveLength(1);
+    expect(html).toContain(`id="${FOOD_FOOTER_ID}"`);
+    expect(html).toContain(`src="${FOOD_FOOTER_RUNTIME}"`);
+    expect(html).toContain('data-subscribe=""');
+    expect(html).toContain('data-feedback=""');
     expect(html).toContain(`data-key="${FOOD_BROWSER_ANALYTICS.publicKey}"`);
     expect(html).toContain(`data-project="${FOOD_BROWSER_ANALYTICS.project}"`);
     expect(html).toContain(`data-endpoint="${FOOD_BROWSER_ANALYTICS.endpoint}"`);
@@ -50,6 +55,7 @@ describe("Worker-rendered product analytics", () => {
     const html = await response.text();
     expect(html).not.toContain(FOOD_BROWSER_ANALYTICS.script);
     expect(html).not.toContain(FOOD_BROWSER_ANALYTICS.publicKey);
+    expect(html).not.toContain(FOOD_FOOTER_ID);
   });
 
   it("keeps Markdown, JSON and Hono error responses free of browser tracking", async () => {
@@ -62,6 +68,7 @@ describe("Worker-rendered product analytics", () => {
       const body = await response.text();
       expect(body).not.toContain(FOOD_BROWSER_ANALYTICS.script);
       expect(body).not.toContain(FOOD_BROWSER_ANALYTICS.publicKey);
+      expect(body).not.toContain(FOOD_FOOTER_ID);
     }
   });
 
