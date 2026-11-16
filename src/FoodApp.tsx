@@ -8,11 +8,12 @@ import { NativeSelect } from "@saas-maker/ui/atoms/native-controls";
 import { Component, lazy, Suspense, type ReactNode, useEffect, useState } from "react";
 import { Input } from "@saas-maker/ui/atoms/input";
 import { CatalogTable } from "./Catalog";
-import { api } from "./api";
+import { publicApi as api } from "./public-api";
 import { CATALOG_SORTS, defaultSortOrder, isCatalogSort, nextSortOrder, type CatalogSort, type SortOrder } from "../shared/catalog-sort";
 const ProductDrawer = lazy(() => import("./ProductDrawer").then((module) => ({ default: module.ProductDrawer })));
 const Sources = lazy(() => import("./Sources").then((module) => ({ default: module.Sources })));
 const Recipes = lazy(() => import("./Recipes").then((module) => ({ default: module.Recipes })));
+const FoodFooter = lazy(() => import("./FoodFooter"));
 import type { CatalogResponse, ProductDetailResponse } from "../shared/api";
 
 class RecipeBoundary extends Component<{ children: ReactNode; name?: string; onDismiss?: () => void }, { failed: boolean }> {
@@ -53,6 +54,16 @@ export function FoodApp() {
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [query, setQuery] = useState(filters.q);
+  const [footerReady, setFooterReady] = useState(false);
+  useEffect(() => {
+    if (footerReady || (view === "foods" && loading)) return;
+    if (!("IntersectionObserver" in window)) { setFooterReady(true); return; }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry?.isIntersecting) { setFooterReady(true); observer.disconnect(); }
+    }, { rootMargin: "400px" });
+    observer.observe(document.getElementById("food-footer-target")!);
+    return () => observer.disconnect();
+  }, [footerReady, loading, view]);
   useEffect(() => {
     if (!filters.q) { setQuery(""); return; }
     const timer = window.setTimeout(() => setQuery(filters.q), 180);
@@ -124,6 +135,7 @@ export function FoodApp() {
       {view === "sources" && <RecipeBoundary name="Data & sources"><Suspense fallback={<Skeleton className="h-48 w-full" role="status" aria-label="Loading data & sources…" />}><Sources /></Suspense></RecipeBoundary>}
     </main>
     <footer className="food-footer"><span>Food by Significant Hobbies</span><span><Button asChild variant="link" className="h-auto whitespace-normal text-left"><a href="https://world.openfoodfacts.org" target="_blank" rel="noreferrer">Open Food Facts</a></Button> · <Button asChild variant="link" className="h-auto whitespace-normal text-left"><a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noreferrer">ODbL</a></Button> · <Button asChild variant="link" className="h-auto whitespace-normal text-left"><a href="https://github.com/Significant-Hobbies/food">Source code</a></Button></span></footer>
+    <div id="food-footer-target">{footerReady && <RecipeBoundary name="Updates and feedback"><Suspense fallback={null}><FoodFooter /></Suspense></RecipeBoundary>}</div>
     {selected && <Card className="product-detail-pending empty:hidden"><RecipeBoundary key={selected} name="Product details" onDismiss={() => setSelected(null)}><Suspense fallback={<><Skeleton role="status" aria-label="Opening product…" className="h-12 w-full" /><Button variant="ghost" onClick={() => setSelected(null)}>Close</Button></>}><ProductDrawer showUnverifiedStatus={false} detail={detail} loading={detailLoading} error={detailError} onClose={() => setSelected(null)} /></Suspense></RecipeBoundary></Card>}
   </div>;
 }

@@ -12,7 +12,7 @@ export const FOOD_PUBLIC_HTML_HEADERS = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
-  "Content-Security-Policy": `default-src 'self'; connect-src 'self' ${new URL(FOOD_BROWSER_ANALYTICS.endpoint).origin}; img-src 'self' https: data:; script-src 'self' https://static.cloudflareinsights.com ${new URL(FOOD_BROWSER_ANALYTICS.script).origin}; style-src 'self' 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`,
+  "Content-Security-Policy": `default-src 'self'; connect-src 'self' ${new URL(FOOD_BROWSER_ANALYTICS.endpoint).origin} https://api.sassmaker.com; img-src 'self' https: data:; script-src 'self' https://static.cloudflareinsights.com ${new URL(FOOD_BROWSER_ANALYTICS.script).origin}; style-src 'self' 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`,
 } as const;
 
 export function isFoodAnalyticsQa(url: URL): boolean {

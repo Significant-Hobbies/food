@@ -401,15 +401,19 @@ export default {
     // Localhost bypasses the cache entirely: mutations only run there, and the
     // operator/review flows must see post-mutation state immediately.
     const local = ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
-    const qaProductHtml = /^\/products\/[^/]+$/.test(url.pathname)
-      && !url.pathname.endsWith(".md") && isFoodAnalyticsQa(url);
+    const productHtml = /^\/products\/[^/]+$/.test(url.pathname) && !url.pathname.endsWith(".md");
+    const qaProductHtml = productHtml && isFoodAnalyticsQa(url);
     const cache = (globalThis.caches as unknown as { default?: Cache } | undefined)?.default;
     if (request.method !== "GET" || local || qaProductHtml || !cache || !EDGE_CACHEABLE_PATH.test(url.pathname)) {
       const response = await app.fetch(request, env, ctx);
       observeRequest(request, response, startedAt, env, ctx);
       return response;
     }
-    const key = new Request(url.toString(), { method: "GET" });
+    // Product HTML embeds build-hashed capture assets; old releases must not
+    // supply cached HTML after those assets have changed. Data cache keys stay stable.
+    const cacheUrl = new URL(url);
+    if (productHtml) cacheUrl.searchParams.set("__food_html_release", env.CF_VERSION_METADATA?.id ?? "unversioned");
+    const key = new Request(cacheUrl.toString(), { method: "GET" });
     const hit = await cache.match(key);
     if (hit) {
       const response = new Response(hit.body, hit);
