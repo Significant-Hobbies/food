@@ -103,8 +103,43 @@ describe("Worker-rendered product analytics", () => {
       expect(await cached.text()).toContain(FOOD_BROWSER_ANALYTICS.script);
       expect(cached.headers.get("content-security-policy")).toBe(FOOD_PUBLIC_HTML_HEADERS["Content-Security-Policy"]);
     } finally {
+      const versioned = new URL(url);
+      versioned.searchParams.set("__food_html_release", env.CF_VERSION_METADATA?.id ?? "unversioned");
+      await cache.delete(new Request(versioned));
       await cache.delete(new Request(url));
       await cache.delete(new Request(qaUrl));
     }
   });
+
+  it("partitions product HTML cache entries by deployed Worker version", async () => {
+    const url = `${FOOD_BROWSER_ANALYTICS.origin}${await productPath()}?capture-cache-version=1`;
+    const cache = (caches as unknown as { default: Cache }).default;
+    const keys = [new Request(url)];
+    const fetchRelease = async (id: string) => {
+      const key = new URL(url);
+      key.searchParams.set("__food_html_release", id);
+      keys.push(new Request(key));
+      const ctx = createExecutionContext();
+      const response = await handler.fetch(new Request(url) as Parameters<typeof handler.fetch>[0], {
+        ...env, CF_VERSION_METADATA: { id, tag: "capture-cache-qa", timestamp: "2026-11-16T00:00:00.000Z" },
+      }, ctx);
+      await waitOnExecutionContext(ctx);
+      return response;
+    };
+    await cache.put(new Request(url), new Response("stale unversioned HTML", { headers: { "Cache-Control": "public, max-age=300" } }));
+    try {
+      const first = await fetchRelease("capture-release-one");
+      expect(first.headers.get("x-edge-cache")).toBe("MISS");
+      expect(await first.text()).toContain(`id="${FOOD_FOOTER_ID}"`);
+      expect((await fetchRelease("capture-release-one")).headers.get("x-edge-cache")).toBe("HIT");
+      const next = await fetchRelease("capture-release-two");
+      expect(next.headers.get("x-edge-cache")).toBe("MISS");
+      expect(await next.text()).not.toContain("__food_html_release");
+      expect((await fetchRelease("capture-release-two")).headers.get("x-edge-cache")).toBe("HIT");
+      expect(await (await cache.match(new Request(url)))?.text()).toBe("stale unversioned HTML");
+    } finally {
+      for (const key of keys) await cache.delete(key);
+    }
+  });
+
 });

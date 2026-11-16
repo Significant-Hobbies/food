@@ -14,6 +14,6 @@ export default function FoodFooter() {
   if (!enabled) return null;
   return <>
     <style>{FOOD_FOOTER_CSS}</style>
-    {createElement("studio-footer", { id: FOOD_FOOTER_ID, dangerouslySetInnerHTML: { __html: FOOD_FOOTER_HTML } })}
+    {createElement("studio-footer", { id: FOOD_FOOTER_ID, "data-mode": "light", "data-theme": "base", dangerouslySetInnerHTML: { __html: FOOD_FOOTER_HTML } })}
   </>;
 }

@@ -20,6 +20,8 @@ describe("Food public capture surfaces", () => {
     const footer = document.querySelector("footer")!;
     const subscription = footer.querySelector<HTMLFormElement>("form[data-subscribe]")!;
     expect(footer.dataset.catalogId).toBe("protein-index");
+    expect(footer.dataset.mode).toBe("light");
+    expect(footer.dataset.theme).toBe("base");
     expect(subscription.dataset.catalog).toBe("protein-index");
     expect(subscription.dataset.kind).toBe("newsletter");
     expect(subscription.querySelector<HTMLInputElement>('input[name="consent"]')).toMatchObject({ checked: false, required: true });
@@ -32,6 +34,7 @@ describe("Food public capture surfaces", () => {
     expect(footer.querySelector("[data-food-capture-status]")?.textContent).toContain("need JavaScript");
     expect(footer.querySelector('form[method="get"]')).toBeNull();
     expect(FOOD_FOOTER_CSS).toContain("#995500");
+    expect(FOOD_FOOTER_CSS).toContain("--display-case: none");
     expect(FOOD_FOOTER_RUNTIME).toMatch(/footer.*\.js/);
   });
 

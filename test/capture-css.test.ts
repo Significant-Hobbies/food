@@ -33,6 +33,8 @@ describe("optional capture stylesheet isolation", () => {
       for (const selector of rule.value.selectors) selectors.push(JSON.stringify(selector[0]));
     } } } });
     expect(selectors.length).toBeGreaterThan(200);
+    expect(css).not.toMatch(/:root|:host/);
+    expect(css).toMatch(/:where\(studio-footer\)\{[^}]*--radius:/);
     for (const selector of selectors) expect(JSON.parse(selector)).toEqual({ type: "pseudo-class", kind: "where", selectors: [[{ type: "type", name: "studio-footer" }]] });
   });
 });
