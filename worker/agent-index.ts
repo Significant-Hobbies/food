@@ -7,7 +7,9 @@
  * returns HTML shells for /llms.txt or /api/ai.
  */
 
-const ORIGIN = "https://food.significanthobbies.com";
+import { FOOD_BROWSER_ANALYTICS, shouldInstallFoodAnalytics } from "../shared/browser-analytics";
+
+const ORIGIN: string = FOOD_BROWSER_ANALYTICS.origin;
 
 export interface PublicProductRoute {
   id: string;
@@ -263,7 +265,7 @@ export function productToMarkdown(product: Record<string, unknown>, origin = ORI
   return lines.join("\n");
 }
 
-export function productToHtml(product: Record<string, unknown>, origin = ORIGIN): string {
+export function productToHtml(product: Record<string, unknown>, origin: string = ORIGIN, requestUrl?: URL): string {
   const identity = productIdentity(product, origin);
   const canonical = `${origin}${identity.path}`;
   const nutrition = object(product.nutrition ?? product.verified_nutrition);
@@ -299,6 +301,9 @@ export function productToHtml(product: Record<string, unknown>, origin = ORIGIN)
     gtin: identity.gtin || undefined,
     url: canonical,
   }).replaceAll("<", "\\u003c");
+  const analytics = requestUrl && shouldInstallFoodAnalytics(requestUrl)
+    ? `<script id="${FOOD_BROWSER_ANALYTICS.trackerId}" async src="${FOOD_BROWSER_ANALYTICS.script}" data-key="${FOOD_BROWSER_ANALYTICS.publicKey}" data-project="${FOOD_BROWSER_ANALYTICS.project}" data-identity="${FOOD_BROWSER_ANALYTICS.identity}" data-endpoint="${FOOD_BROWSER_ANALYTICS.endpoint}"></script>`
+    : "";
   return `<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -310,6 +315,7 @@ export function productToHtml(product: Record<string, unknown>, origin = ORIGIN)
 <meta property="og:title" content="${escapeHtml(identity.name)} · Food">
 <meta property="og:description" content="${escapeHtml(description)}"><meta property="og:url" content="${escapeHtml(canonical)}">
 <script type="application/ld+json">${jsonLd}</script>
+${analytics}
 <style>:root{color:#1b252b;background:#f4f5f6;font-family:system-ui,sans-serif}*{box-sizing:border-box}body{margin:0}a{color:#925000;text-underline-offset:3px}a:focus-visible{outline:3px solid #b57924;outline-offset:3px}.shell{width:min(920px,calc(100% - 40px));margin:auto;padding:30px 0 64px}.brand{display:block;padding:20px 24px;background:#19242b;color:white;text-decoration:none;font-size:24px;font-weight:750}.mark{display:none}.crumb{margin:34px 0 12px;color:#52606b;font-size:13px}h1{max-width:28ch;margin:0;font-size:clamp(28px,5vw,44px);font-weight:650;line-height:1.15;letter-spacing:-.035em;overflow-wrap:anywhere}.meta{color:#52606b;font-size:14px;line-height:1.6}.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:30px 0;background:white;border:1px solid #d7dde1}.fact{min-width:0;padding:20px;border-bottom:1px solid #d7dde1}.fact span,.state span{display:block;color:#52606b;font-size:12px}.fact strong{display:block;margin-top:8px;font-size:22px;font-weight:550;font-variant-numeric:tabular-nums}.evidence{display:grid;grid-template-columns:1fr 1fr;gap:20px}.state{padding:18px;background:#e9edef}.state strong{display:block;margin-top:6px;font-size:14px}.note{max-width:75ch;margin-top:28px;color:#52606b;line-height:1.7;font-size:13px}@media(max-width:640px){.facts{grid-template-columns:repeat(2,minmax(0,1fr))}.evidence{grid-template-columns:1fr}.fact{padding:18px 14px}}</style>
 </head><body><main class="shell">
 <a class="brand" href="/"><span class="mark" aria-hidden="true">F</span><span>Food</span></a>

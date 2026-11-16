@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { ReviewDecision, ReviewStatus, ReviewType } from "../shared/api";
+import { FOOD_PUBLIC_HTML_HEADERS, isFoodAnalyticsQa } from "../shared/browser-analytics";
 import {
   INDEX_MD,
   LLMS_TXT,
@@ -45,6 +46,13 @@ function text(body: string, type: string, status = 200) {
   });
 }
 
+function productHtml(body: string, url: URL, status = 200) {
+  const response = text(body, "text/html; charset=utf-8", status);
+  for (const [name, value] of Object.entries(FOOD_PUBLIC_HTML_HEADERS)) response.headers.set(name, value);
+  if (isFoodAnalyticsQa(url)) response.headers.set("Cache-Control", "no-store");
+  return response;
+}
+
 // --- Agent / LLM indexing (must win over SPA asset fallback) ---
 app.get("/llms.txt", (c) => text(LLMS_TXT, "text/plain; charset=utf-8"));
 app.get("/index.md", (c) => text(INDEX_MD, "text/markdown; charset=utf-8"));
@@ -68,12 +76,13 @@ app.get("/products/:id{[^/]+\\.md}", async (c) => {
 });
 app.get("/products/:id", async (c) => {
   const id = c.req.param("id");
+  const url = new URL(c.req.url);
   if (!(await isActivePublicProduct(c.env.DB, id))) {
-    return text("<!doctype html><title>Product not found</title><h1>Product not found</h1>", "text/html; charset=utf-8", 404);
+    return productHtml("<!doctype html><title>Product not found</title><h1>Product not found</h1>", url, 404);
   }
   const product = await getProductDetail(c.env.DB, id);
-  if (!product) return text("<!doctype html><title>Product not found</title><h1>Product not found</h1>", "text/html; charset=utf-8", 404);
-  return text(productToHtml(product as unknown as Record<string, unknown>, new URL(c.req.url).origin), "text/html; charset=utf-8");
+  if (!product) return productHtml("<!doctype html><title>Product not found</title><h1>Product not found</h1>", url, 404);
+  return productHtml(productToHtml(product as unknown as Record<string, unknown>, url.origin, url), url);
 });
 app.get("/api/products/:id{[^/]+\\.md}", async (c) => {
   const pathId = c.req.param("id") ?? "";
@@ -392,10 +401,12 @@ export default {
     // Localhost bypasses the cache entirely: mutations only run there, and the
     // operator/review flows must see post-mutation state immediately.
     const local = ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
+    const qaProductHtml = /^\/products\/[^/]+$/.test(url.pathname)
+      && !url.pathname.endsWith(".md") && isFoodAnalyticsQa(url);
     const cache = (globalThis.caches as unknown as { default?: Cache } | undefined)?.default;
-    if (request.method !== "GET" || local || !cache || !EDGE_CACHEABLE_PATH.test(url.pathname)) {
+    if (request.method !== "GET" || local || qaProductHtml || !cache || !EDGE_CACHEABLE_PATH.test(url.pathname)) {
       const response = await app.fetch(request, env, ctx);
-      observeRequest(request, response, startedAt, env, ctx, "bypass");
+      observeRequest(request, response, startedAt, env, ctx);
       return response;
     }
     const key = new Request(url.toString(), { method: "GET" });
@@ -403,7 +414,7 @@ export default {
     if (hit) {
       const response = new Response(hit.body, hit);
       response.headers.set("x-edge-cache", "HIT");
-      observeRequest(request, response, startedAt, env, ctx, "hit");
+      observeRequest(request, response, startedAt, env, ctx);
       return response;
     }
     const response = await app.fetch(request, env, ctx);
@@ -413,7 +424,7 @@ export default {
       ctx.waitUntil(cache.put(key, stored));
       response.headers.set("x-edge-cache", "MISS");
     }
-    observeRequest(request, response, startedAt, env, ctx, "miss");
+    observeRequest(request, response, startedAt, env, ctx);
     return response;
   },
 } satisfies ExportedHandler<Env>;
