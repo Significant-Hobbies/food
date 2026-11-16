@@ -52,8 +52,10 @@ describe("Worker-rendered product analytics", () => {
     expect(html).not.toContain(FOOD_BROWSER_ANALYTICS.publicKey);
   });
 
-  it("keeps Markdown, JSON, errors and operator responses free of browser tracking", async () => {
+  it("keeps Markdown, JSON and Hono error responses free of browser tracking", async () => {
     const path = await productPath();
+    // /operator here checks Hono's 404, not the production ASSETS-served SPA.
+    // The SPA guard has browser unit coverage; local ASSETS 200/CSP was verified separately.
     for (const [route, status] of [[`${path}.md`, 200], [`/api${path}`, 200], [`/api${path}.md`, 200], ["/products/food-missing-product", 404], ["/operator", 404]] as const) {
       const response = await worker.fetch(`${FOOD_BROWSER_ANALYTICS.origin}${route}`);
       expect(response.status).toBe(status);
