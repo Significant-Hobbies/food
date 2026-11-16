@@ -1,7 +1,3 @@
-// App-Health endpoint telemetry: per-route method/status/duration shipped to
-// the ingest collector. Silent no-op until APP_HEALTH_INGEST_KEY is set —
-// routes stay unobserved in local/test runs. Cache hits are recorded too so
-// the dashboard shows traffic shape and hit ratio, not just origin cost.
 import { createAppHealthClient } from "@saas-maker/app-health";
 
 const INGEST_ENDPOINT = "https://ingest.sassmaker.com/v1/ingest";
@@ -18,6 +14,7 @@ function routeFor(pathname: string): string | null {
     "/api/coverage",
     "/api/ai",
     "/health",
+    "/api/health",
     "/sitemap.xml",
     "/llms.txt",
     "/llms-full.txt",
@@ -32,7 +29,6 @@ export function observeRequest(
   startedAt: number,
   env: Env,
   ctx: ExecutionContext,
-  edgeCache: "hit" | "miss" | "bypass",
 ): void {
   const key = "APP_HEALTH_INGEST_KEY" in env && typeof env.APP_HEALTH_INGEST_KEY === "string" ? env.APP_HEALTH_INGEST_KEY.trim() : "";
   const route = routeFor(new URL(request.url).pathname);
@@ -54,12 +50,6 @@ export function observeRequest(
       route,
       status_code: response.status,
       duration_ms: Math.max(0, Math.round(Date.now() - startedAt)),
-    });
-    // Cache hits/misses ride along as a log event so hit ratio is visible per
-    // route — record() only accepts endpoint-summary fields.
-    client.log("edge_cache", {
-      level: "info",
-      props: { route, edge_cache: edgeCache },
     });
     ctx.waitUntil(client.flush().catch(() => undefined));
   } catch {

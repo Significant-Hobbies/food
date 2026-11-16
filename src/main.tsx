@@ -5,6 +5,7 @@ import { isLocalOperatorRoute } from "./operator-route";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element not found");
+void import("./browser-analytics").catch(() => undefined);
 
 async function mount() {
   const App = isLocalOperatorRoute(window.location)

@@ -395,7 +395,7 @@ export default {
     const cache = (globalThis.caches as unknown as { default?: Cache } | undefined)?.default;
     if (request.method !== "GET" || local || !cache || !EDGE_CACHEABLE_PATH.test(url.pathname)) {
       const response = await app.fetch(request, env, ctx);
-      observeRequest(request, response, startedAt, env, ctx, "bypass");
+      observeRequest(request, response, startedAt, env, ctx);
       return response;
     }
     const key = new Request(url.toString(), { method: "GET" });
@@ -403,7 +403,7 @@ export default {
     if (hit) {
       const response = new Response(hit.body, hit);
       response.headers.set("x-edge-cache", "HIT");
-      observeRequest(request, response, startedAt, env, ctx, "hit");
+      observeRequest(request, response, startedAt, env, ctx);
       return response;
     }
     const response = await app.fetch(request, env, ctx);
@@ -413,7 +413,7 @@ export default {
       ctx.waitUntil(cache.put(key, stored));
       response.headers.set("x-edge-cache", "MISS");
     }
-    observeRequest(request, response, startedAt, env, ctx, "miss");
+    observeRequest(request, response, startedAt, env, ctx);
     return response;
   },
 } satisfies ExportedHandler<Env>;

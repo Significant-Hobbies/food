@@ -2,6 +2,14 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; connect-src 'self' https://ingest.sassmaker.com; img-src 'self' https: data:; script-src 'self' https://static.cloudflareinsights.com https://health.sassmaker.com; style-src 'self' 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
+
+/operator
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; connect-src 'self'; img-src 'self' https: data:; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
+
+/operator/*
+  ! Content-Security-Policy
   Content-Security-Policy: default-src 'self'; connect-src 'self'; img-src 'self' https: data:; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
 
 /assets/*

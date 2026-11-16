@@ -4,6 +4,8 @@ Food unifies the Protein Index catalog and Recipe Index collection. Canonical so
 
 The prepared Open Food Facts Parquet snapshot and its quality report are in data/food-quality.json. Community records remain unverified; exact flagged conflicts have no protein ranking. Recipes retain publisher estimates and original links.
 
+16 November 2026: prepared App Health browser collection at the canonical Food origin with session identity. Local, operator and `fleet_qa=1` pages stay silent. Endpoint telemetry sends normalized summaries without deriving application logs from request traffic. The public content policy allows the required tracker and collector origins; operator routes retain their prior restrictions. Backend key binding, deployment and fresh accepted production receipts remain release checks.
+
 Run `pnpm check`, `python3 test/test_off_parquet.py` and `pnpm docs:validate` for source qualification. Deployment is manual and guarded against dirty, unsynced or unqualified source. The running `/api/health` reports the actual version tag and source snapshot; GitHub issue #5 tracks delivery and runtime proof. Historical data/ref recovery is retained without restoring the former retired services.
 
 13 November 2026: comparison headings and the mobile selector support server-side ascending/descending sorting across pages. Product rows/cards open details. Country scope remains India-tagged products by owner choice.
