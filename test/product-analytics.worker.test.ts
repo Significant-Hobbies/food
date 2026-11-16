@@ -2,7 +2,7 @@ import { env, exports } from "cloudflare:workers";
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { FOOD_BROWSER_ANALYTICS, FOOD_PUBLIC_HTML_HEADERS } from "../shared/browser-analytics";
-import { FOOD_FOOTER_ID, FOOD_FOOTER_RUNTIME } from "../shared/capture-footer";
+import { FOOD_CAPTURE_LOADER, FOOD_FOOTER_ID, FOOD_FOOTER_RUNTIME } from "../shared/capture-footer";
 import handler from "../worker/index";
 
 const worker = exports.default;
@@ -23,7 +23,8 @@ describe("Worker-rendered product analytics", () => {
     expect(html).not.toContain("private-query");
     expect(html.match(/src="https:\/\/health\.sassmaker\.com\/tracker\.js"/g)).toHaveLength(1);
     expect(html).toContain(`id="${FOOD_FOOTER_ID}"`);
-    expect(html).toContain(`src="${FOOD_FOOTER_RUNTIME}"`);
+    expect(html).toContain(`src="${FOOD_CAPTURE_LOADER}"`);
+    expect(html).toContain(`data-food-footer-runtime="${FOOD_FOOTER_RUNTIME}"`);
     expect(html).toContain('data-subscribe=""');
     expect(html).toContain('data-feedback=""');
     expect(html).toContain(`data-key="${FOOD_BROWSER_ANALYTICS.publicKey}"`);

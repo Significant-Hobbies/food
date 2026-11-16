@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { FOOD_CAPTURE_API, FOOD_FOOTER_CSS, FOOD_FOOTER_HTML, FOOD_FOOTER_RUNTIME, foodCaptureHtml, shouldRenderFoodCapture } from "../shared/capture-footer";
 import { productToHtml, productToMarkdown } from "../worker/agent-index";
 import { FOOD_PUBLIC_HTML_HEADERS } from "../shared/browser-analytics";
+import { activateFoodCapture } from "../shared/capture-runtime.js";
 
 beforeEach(() => {
   document.body.innerHTML = "";
@@ -27,9 +28,9 @@ describe("Food public capture surfaces", () => {
     expect(footer.querySelector("[data-feedback-dialog]" )?.getAttribute("aria-labelledby")).toBe("fb-title");
     expect(footer.querySelector('form[data-feedback] [name="consent"]')).toMatchObject({ checked: false, required: true });
     expect(footer.querySelector('a[href="https://sassmaker.com/privacy"]')).not.toBeNull();
-    for (const url of ["https://world.openfoodfacts.org", "https://opendatacommons.org/licenses/odbl/1-0/", "https://github.com/Significant-Hobbies/food"]) {
-      expect(footer.querySelector(`a[href="${url}"]`)).not.toBeNull();
-    }
+    expect(footer.querySelector<HTMLButtonElement>("button[data-feedback-open]")?.disabled).toBe(true);
+    expect(footer.querySelector("[data-food-capture-status]")?.textContent).toContain("need JavaScript");
+    expect(footer.querySelector('form[method="get"]')).toBeNull();
     expect(FOOD_FOOTER_CSS).toContain("#995500");
     expect(FOOD_FOOTER_RUNTIME).toMatch(/footer.*\.js/);
   });
@@ -38,10 +39,11 @@ describe("Food public capture surfaces", () => {
     document.body.innerHTML = FOOD_FOOTER_HTML;
     const actions = new Set(FOOD_PUBLIC_HTML_HEADERS["Content-Security-Policy"].split(";").find((value) => value.trim().startsWith("form-action"))?.trim().split(/\s+/).slice(1));
     expect(actions).toEqual(new Set(["'self'"]));
-    for (const form of document.querySelectorAll<HTMLFormElement>("form[data-subscribe], form[data-feedback]")) {
+    for (const form of document.querySelectorAll<HTMLFormElement>("form")) {
       expect(form.method).toBe("post");
       expect(new URL(form.action).origin).toBe(FOOD_CAPTURE_API);
       expect(new URL(form.action).origin).not.toBe("https://food.significanthobbies.com");
+      expect(form.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
     }
   });
 
@@ -71,6 +73,9 @@ describe("Food public capture surfaces", () => {
     expect(html).toContain('data-catalog-id="protein-index"');
     expect(html).toContain('data-subscribe=""');
     expect(html).toContain('data-feedback=""');
+    for (const url of ["https://world.openfoodfacts.org", "https://opendatacommons.org/licenses/odbl/1-0/", "https://github.com/Significant-Hobbies/food"]) {
+      expect(html).toContain(`href="${url}"`);
+    }
     expect(productToMarkdown(product)).not.toContain("data-subscribe");
   });
 
@@ -97,6 +102,9 @@ describe("Food public capture surfaces", () => {
     const root = document.createElement("studio-footer");
     root.innerHTML = FOOD_FOOTER_HTML;
     document.body.appendChild(root);
+    activateFoodCapture(root);
+    expect(root.dataset.captureReady).toBe("true");
+    expect(root.querySelector("[data-food-capture-status]")?.textContent).toBe("");
     const subscribe = document.querySelector<HTMLFormElement>("form[data-subscribe]")!;
     subscribe.querySelector<HTMLInputElement>('[name="email"]')!.value = "capture-qa@example.invalid";
     subscribe.requestSubmit();
