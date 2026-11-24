@@ -36,6 +36,24 @@ describe("global catalog sorting", () => {
     expect(details).toContain(`COVERING INDEX ${index}`);
     expect(details).not.toContain("TEMP B-TREE");
   });
+
+  it("reads only 25 indexed product IDs for a full default density page", async () => {
+    await env.DB.prepare(`WITH RECURSIVE fixtures(i) AS (
+      VALUES (1) UNION ALL SELECT i + 1 FROM fixtures WHERE i < 30
+    ) INSERT INTO products (id, brand, brand_normalized, name, name_normalized,
+      category, classifier_version, created_at, updated_at)
+      SELECT 'density-budget-' || i, 'Fixture', 'fixture', 'Fixture ' || i,
+        'fixture ' || i, 'other', 'fixture', '2026-11-24', '2026-11-24' FROM fixtures`).run();
+    try {
+      const page = catalogPageQuery(validateSearch(new URLSearchParams()).value!);
+      const result = await env.DB.prepare(page.sql).bind(...page.bindings).all();
+      expect(result.results).toHaveLength(25);
+      expect(result.meta.rows_read).toBe(25);
+    } finally {
+      await env.DB.prepare("DELETE FROM products WHERE id GLOB 'density-budget-*'").run();
+    }
+  });
+
   it("places serving and unknown bases last without treating them as per-100 amounts", async () => {
     const cases = [["basis_known", "per_100g", 10], ["basis_serving", "per_serving", 90], ["basis_unknown", "unknown", 99]] as const;
     try {

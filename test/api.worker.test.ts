@@ -2447,6 +2447,117 @@ describe("Worker catalog API", () => {
 });
 
 describe("density sort key maintenance", () => {
+  it("withholds mixed-basis density and repairs the legacy stored key", async () => {
+    const product = await env.DB.prepare("SELECT gtin FROM products WHERE is_active = 1 AND gtin IS NOT NULL ORDER BY id LIMIT 1")
+      .first<{ gtin: string }>();
+    if (!product) throw new Error("Expected product for exact reviewed density fixture");
+    const evidence = robotoffEvidence(product.gtin, {
+      calories: 380, proteinGrams: 32, carbohydrateGrams: 42, sugarGrams: 4,
+      fatGrams: 9, saturatedFatGrams: 2, fibreGrams: 5, sodiumMg: 190,
+    });
+    const candidate = nutritionCandidateFromEvidence(evidence, product.gtin);
+    if (!candidate) throw new Error("Expected reviewed density candidate");
+    const review = await insertRobotoffReview({ suffix: "density-basis", evidence });
+    await env.DB.prepare("UPDATE extraction_attempts SET is_current = 0 WHERE product_id = ? AND field_family = 'nutrition'")
+      .bind(review.productId).run();
+    const exact = await attachExactExtraction(review, evidence, "nutrition");
+    const response = await worker.fetch(`http://localhost/api/reviews/${review.reviewId}/resolve`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        decision: "verify_nutrition", rationale: "Exact current nutrition for density alignment",
+        evidenceUrl: candidate.imageUrl,
+      }),
+    });
+    expect(response.status).toBe(200);
+    const reviewed = await env.DB.prepare("SELECT id, product_id FROM source_records WHERE id = ?")
+      .bind(review.sourceRecordId).first<{ product_id: string; id: string }>();
+    if (!reviewed) throw new Error("Expected reviewed fixture source record");
+    expect(await env.DB.prepare("SELECT source_record_id FROM current_verified_nutrition_facts WHERE product_id = ?")
+      .bind(reviewed.product_id).first("source_record_id")).toBe(reviewed.id);
+    const catalog = async () => json<CatalogResponse>(await worker.fetch(
+      "http://localhost/api/products?q=density%20boundary&scope=all&sort=protein_density",
+    ));
+    const subject = await env.DB.prepare(`SELECT subject_source_record_id AS id, subject_source_content_hash AS content_hash
+      FROM label_evidence_assets WHERE id = ?`).bind(exact.labelAssetId).first<{ id: string; content_hash: string }>();
+    if (!subject) throw new Error("Expected original label subject");
+    const hash = "a".repeat(64);
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO products (id, brand, brand_normalized, name, name_normalized,
+        category, classifier_version, created_at, updated_at)
+        VALUES ('density-control', 'Fixture', 'fixture', 'Density boundary Control',
+          'density boundary control', 'other', 'fixture', '2026-11-24', '2026-11-24')`),
+      env.DB.prepare(`INSERT INTO nutrition_facts (product_id, status, confidence, authority, basis,
+        preparation_state, calories, protein_grams, observed_at, updated_at)
+        VALUES ('density-control', 'unverified', 'low', 40, 'per_100g', 'as_sold',
+          300, 30, '2026-11-24', '2026-11-24')`),
+      env.DB.prepare(`UPDATE products SET name = 'Density boundary Overlay',
+        name_normalized = 'density boundary overlay' WHERE id = ?`).bind(reviewed.product_id),
+      env.DB.prepare(`INSERT INTO label_evidence_assets
+        (id, subject_source_record_id, subject_source_content_hash, product_id,
+         field_family, source_image_id, source_image_revision, requested_url,
+         effective_url, content_sha256, byte_length, media_type, fetched_at)
+        VALUES ('density-machine-label', ?, ?, ?, 'nutrition', 'density-image', '1',
+          'https://example.invalid/label', 'https://example.invalid/label', ?, 1024,
+          'image/jpeg', '2026-11-24T00:00:00.000Z')`)
+        .bind(subject.id, subject.content_hash, reviewed.product_id, hash),
+      env.DB.prepare(`INSERT INTO machine_nutrition_verifications
+        (id, product_id, subject_source_record_id, subject_source_content_hash,
+         label_asset_id, label_content_sha256, source_image_revision, basis,
+         calories, protein_grams, ocr_engine, ocr_version, ocr_output_sha256,
+         model_id, model_digest, model_output_sha256, prompt_sha256, normalizer_version,
+         normalized_result_sha256, validator_version, validation_report_sha256,
+         release_manifest_sha256, verified_at)
+        VALUES ('density-machine', ?, ?, ?, 'density-machine-label', ?, '1',
+          'per_100g', 360, 52, 'fixture', '1', ?, 'fixture', ?, ?, ?, 'fixture',
+          ?, 'fixture', ?, ?, '2026-11-24T00:00:00.000Z')`)
+        .bind(reviewed.product_id, subject.id, subject.content_hash, hash,
+          hash, hash, hash, hash, hash, hash, hash),
+      // Model a retained partial fact after the real review fixture establishes
+      // its evidence binding. Both effective evidence views must stay current.
+      env.DB.prepare(`UPDATE nutrition_facts SET basis = 'per_serving',
+        calories = 260, protein_grams = NULL, carbohydrate_grams = NULL,
+        fat_grams = NULL WHERE product_id = ?`).bind(reviewed.product_id),
+    ]);
+    expect(await env.DB.prepare(`SELECT basis, protein_grams
+      FROM current_machine_verified_nutrition_facts WHERE product_id = ?`)
+      .bind(reviewed.product_id).first()).toEqual({ basis: "per_100g", protein_grams: 52 });
+    const storedKey = () => env.DB.prepare("SELECT sort_protein_density FROM products WHERE id = ?")
+      .bind(reviewed.product_id).first<number>("sort_protein_density");
+
+    const mixed = (await catalog()).products;
+    const ranked = mixed.map(({ id }) => id);
+    expect(mixed.find(({ id }) => id === reviewed.product_id)).toMatchObject({
+      nutritionStatus: "verified",
+      nutrition: { basis: "per_serving", calories: 260, proteinGrams: null },
+      metrics: { proteinPer100Calories: { value: null } },
+    });
+    expect(await storedKey()).toBeNull();
+    expect(ranked.indexOf("density-control")).toBeLessThan(ranked.indexOf(reviewed.product_id));
+
+    // A same-basis machine fact can still complete the reviewed core fields.
+    await env.DB.prepare("UPDATE nutrition_facts SET basis = 'per_100g' WHERE product_id = ?")
+      .bind(reviewed.product_id).run();
+    expect(await storedKey()).toBe(20);
+    expect((await catalog()).products[0]).toMatchObject({
+      id: reviewed.product_id, metrics: { proteinPer100Calories: { value: 20 } },
+    });
+
+    const legacyView = env.TEST_MIGRATIONS.find(({ name }) => name.startsWith("0022_"))
+      ?.queries.find((sql) => sql.startsWith("CREATE VIEW product_density_sort_keys"));
+    const repair = env.TEST_MIGRATIONS.find(({ name }) => name.startsWith("0026_"));
+    if (!legacyView || !repair) throw new Error("Expected legacy and replacement density key migrations");
+    await env.DB.batch([
+      env.DB.prepare("DROP VIEW product_density_sort_keys"),
+      env.DB.prepare(legacyView),
+      env.DB.prepare("UPDATE nutrition_facts SET basis = 'per_serving' WHERE product_id = ?")
+        .bind(reviewed.product_id),
+    ]);
+    expect(await storedKey()).toBe(20);
+    await env.DB.batch(repair.queries.map((sql) => env.DB.prepare(sql)));
+    expect(await storedKey()).toBeNull();
+  });
+
   it("keeps sort_protein_density equal to the canonical key after evidence writes", async () => {
     const product = await env.DB.prepare(
       "SELECT id FROM products WHERE is_active = 1 ORDER BY id LIMIT 1",
