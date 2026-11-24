@@ -2557,9 +2557,41 @@ describe("density sort key maintenance", () => {
       env.DB.prepare("UPDATE nutrition_facts SET basis = 'per_serving' WHERE product_id = ?")
         .bind(reviewed.product_id),
     ]);
-    expect(await storedKey()).toBe(20);
-    await env.DB.batch(repair.queries.map((sql) => env.DB.prepare(sql)));
+    try {
+      expect(await storedKey()).toBe(20);
+    } finally {
+      await applyQueries(repair.queries);
+    }
     expect(await storedKey()).toBeNull();
+
+    // Retained labels and unrelated products must not multiply the read cost
+    // of evaluating the full density view during backfill or source changes.
+    await env.DB.batch([
+      env.DB.prepare(`WITH RECURSIVE fixtures(i) AS (
+        VALUES (1) UNION ALL SELECT i + 1 FROM fixtures WHERE i < 160
+      ) INSERT INTO products (id, brand, brand_normalized, name, name_normalized,
+        category, classifier_version, created_at, updated_at)
+        SELECT 'density-maintenance-' || i, 'Fixture', 'fixture', 'Fixture ' || i,
+          'fixture ' || i, 'other', 'fixture', '2026-11-24', '2026-11-24' FROM fixtures`),
+      env.DB.prepare(`WITH RECURSIVE labels(i) AS (
+        VALUES (1) UNION ALL SELECT i + 1 FROM labels WHERE i < 80
+      ) INSERT INTO label_evidence_assets
+        (id, subject_source_record_id, subject_source_content_hash, product_id,
+         field_family, source_image_id, source_image_revision, requested_url,
+         effective_url, content_sha256, byte_length, media_type, fetched_at)
+        SELECT 'density-retained-' || i, ?, ?, ?, 'nutrition', 'density-retained-' || i, '1',
+          'https://example.invalid/density-' || i, 'https://example.invalid/density-' || i,
+          ?, 1024, 'image/jpeg', '2026-11-24T00:00:00.000Z' FROM labels`)
+        .bind(subject.id, subject.content_hash, reviewed.product_id, "b".repeat(64)),
+    ]);
+    const fullView = await env.DB.prepare(`SELECT COUNT(*) AS count,
+      SUM(COALESCE(sort_protein_density, 0)) AS total FROM product_density_sort_keys`).all<{ count: number }>();
+    const nutritionWrite = await env.DB.prepare(`UPDATE nutrition_facts SET basis = 'per_100g'
+      WHERE product_id = ?`).bind(reviewed.product_id).run();
+    expect(fullView.results[0]?.count).toBeGreaterThanOrEqual(162);
+    expect(fullView.meta.rows_read).toBeLessThan(3000);
+    expect(nutritionWrite.meta.rows_read).toBeLessThan(3000);
+    expect(await storedKey()).toBe(20);
   });
 
   it("keeps sort_protein_density equal to the canonical key after evidence writes", async () => {

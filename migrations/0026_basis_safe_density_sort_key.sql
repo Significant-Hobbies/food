@@ -22,14 +22,17 @@ WITH density_inputs AS (
   LEFT JOIN nutrition_facts n ON n.product_id = p.id
   LEFT JOIN current_verified_nutrition_facts verified_nutrition
     ON verified_nutrition.product_id = p.id
-  LEFT JOIN current_machine_verified_nutrition_facts machine_nutrition
-    ON machine_nutrition.id = (
-      SELECT candidate.id
+  LEFT JOIN (
+    SELECT product_id, basis, calories, protein_grams
+    FROM (
+      SELECT candidate.product_id, candidate.basis, candidate.calories, candidate.protein_grams,
+        ROW_NUMBER() OVER (
+          PARTITION BY candidate.product_id ORDER BY candidate.verified_at DESC, candidate.id DESC
+        ) AS density_rank
       FROM current_machine_verified_nutrition_facts candidate
-      WHERE candidate.product_id = p.id
-      ORDER BY candidate.verified_at DESC, candidate.id DESC
-      LIMIT 1
     )
+    WHERE density_rank = 1
+  ) machine_nutrition ON machine_nutrition.product_id = p.id
 )
 SELECT product_id,
   CASE WHEN eligible AND calories > 0 AND protein_grams >= 0

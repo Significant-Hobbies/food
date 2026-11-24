@@ -1,6 +1,6 @@
 # Protein Index — PROJECT STATUS
 
-Last updated: 2026-11-16
+Last updated: 2026-11-24
 
 ## Why / What
 
@@ -52,6 +52,8 @@ the strict terminal-evidence gate above is actually satisfied.
 - Fleet standards and release controls in `../AGENTS.md`
 
 ## Timeline
+
+- 2026-11-24 — prepared the additive density-key migration and local evidence regression. The current state and production boundary are recorded in [STATUS.md](STATUS.md).
 
 - 2026-11-16 — prepared the public Food newsletter and feedback surface for App Health #83/#167. The installed shared footer supplies consent and idempotent feedback retries without a new dependency. Public SPA and product HTML share the canonical catalog identity and self-hosted assets; operator/local pages remain excluded. SPA capture loads near the viewport with isolated vendor styles; original attribution stays available if capture fails. Controls start disabled until the runtime binds, and POST fallback actions remain blocked by the unchanged form-action policy. Product HTML cache keys include the deployed Worker version to avoid stale capture assets. The normal owner binding is configured. Source checks and compiled responsive interactions are distinct from pending production release and durable capture/alert/report qualification.
 
