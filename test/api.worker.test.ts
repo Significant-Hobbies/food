@@ -2455,6 +2455,10 @@ describe("density sort key maintenance", () => {
       calories: 380, proteinGrams: 32, carbohydrateGrams: 42, sugarGrams: 4,
       fatGrams: 9, saturatedFatGrams: 2, fibreGrams: 5, sodiumMg: 190,
     });
+    const label = (evidence as { details: { candidate: { imageId: string; imageUrl: string } } })
+      .details.candidate;
+    label.imageId = "density-basis-label";
+    label.imageUrl = "https://images.openfoodfacts.org/images/products/density-basis-label.jpg";
     const candidate = nutritionCandidateFromEvidence(evidence, product.gtin);
     if (!candidate) throw new Error("Expected reviewed density candidate");
     const review = await insertRobotoffReview({ suffix: "density-basis", evidence });
